@@ -1,0 +1,5 @@
+*.log
+/.settings/
+.DS_Store
+*.sublime-project
+*.app
