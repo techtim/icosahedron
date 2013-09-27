@@ -75,30 +75,35 @@ const ofVec3f icoIndices[] = {
     ofVec3f(1, 6, 10)
 };
 
-void get_vertices(ofMesh ico) {
-    ico.addVertices(&icoVerts[0], 12);
-    ico.addIndices(&Faces[0], 60);
-//    ofxMeshUtils::calcNormals(ico);
-    vector<ofVec3f> vertices = ico.getVertices();
-    ofMatrix4x4 ROTX = ofMatrix4x4::newRotationMatrix(10.9f,1,0,0);
-    ofMatrix4x4 R = ofMatrix4x4::newRotationMatrix(18,0,0,1);
-    ofMatrix4x4 T = ofMatrix4x4::newTranslationMatrix(ofVec3f(0,0,0));
-    
-    for (int i=0; i<vertices.size(); i++) {
-        //        vertices[i] =
+class icoUtils {
+public:
+
+    static ofMesh get_vertices() {
+        ofMesh ico;
+        ico.addVertices(&icoVerts[0], 12);
+        ico.addIndices(&Faces[0], 60);
+        return ico;
+//        ofxMeshUtils::calcNormals(ico);
+//        vector<ofVec3f> vertices = ico.getVertices();
+        ofMatrix4x4 ROTX = ofMatrix4x4::newRotationMatrix(10.9f,1,0,0);
+        ofMatrix4x4 R = ofMatrix4x4::newRotationMatrix(18,0,0,1);
+        ofMatrix4x4 T = ofMatrix4x4::newTranslationMatrix(ofVec3f(0,0,0));
         
-        ofVec4f myVector = ofVec4f(vertices[i][0], vertices[i][1], vertices[i][2], 1.0f);
-        
-        // fill myMatrix and myVector somehow
-        //        myVector.
-        //        vertices[i].r
-        ofVec3f transformedVector = vertices[i]*R*ROTX*T;
-        vertices[i][0] = transformedVector.x;
-        vertices[i][1] = transformedVector.y;
-        vertices[i][2] = transformedVector.z;
-        ico.setVertex(i, transformedVector);
-        //        ico.setVertex(i, ofVec3f(transformedVector.x, transformedVector.y,transformedVector.z));
+        for (int i=0; i<12; i++) {
+            //        vertices[i] =
+            
+//            ofVec4f myVector = ofVec4f(vertices[i][0], vertices[i][1], vertices[i][2], 1.0f);
+            
+            // fill myMatrix and myVector somehow
+            //        myVector.
+            //        vertices[i].r
+            ofVec3f transformedVector = icoVerts[i]*R*ROTX*T;
+
+            ico.addVertex(transformedVector);
+            //        ico.setVertex(i, ofVec3f(transformedVector.x, transformedVector.y,transformedVector.z));
+        }
+        ico.addIndices(&Faces[0], 60);
+        return ico;
     }
 
-}
-
+};

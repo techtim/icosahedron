@@ -9,7 +9,7 @@
 #include "OrthoCamera.h"
 
 #define N_CAMERAS 12
-#define N_LEDS 320
+#define N_LEDS 800
 #define RPI_HOST "192.168.2.222"
 #define RPI_PORT 2525
 
@@ -51,7 +51,10 @@ class testApp : public ofBaseApp{
 
         ofEasyCam cam;
         orthoCamera * cameras[N_CAMERAS];
-        
+//        ofEasyCam * cameras[N_CAMERAS];
+    
+        ofFbo sideFbo;
+    
         unsigned int selectCam;
         //viewports
         ofRectangle viewMain;
@@ -59,7 +62,7 @@ class testApp : public ofBaseApp{
 
         ofVbo vbo;
         
-        ofxMesh boxMesh, icoMesh, resultCsg;
+        ofMesh boxMesh, icoMesh, resultCsg;
         ofVbo boxVbo;
         ofVec3f icoSpin;
         ofVec3f icoNormals[3];
@@ -192,6 +195,22 @@ class testApp : public ofBaseApp{
 //    ofVec3f(5, 10, 9),
 //    ofVec3f(1, 6, 10)
 //};
+
+const ofIndexType icoUniqSides[] = {
+    0, 1, 2, //0
+    0, 4, 5, //1
+    0, 4, 3, //2
+    4, 9, 8, //3
+    3, 8, 7,
+    3, 7, 2,
+    2, 6, 1,
+    1, 10, 5, //7
+    5, 10, 9, //8
+    7, 6, 11, //9
+    10, 6, 11,
+    8, 9, 11, //11
+    
+};
 
 const ofVec3f boxVertices[] = {
 	
