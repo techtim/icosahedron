@@ -13,8 +13,9 @@ void testApp::setup(){
 
     ofSetCircleResolution(64);
 
-    setupCam(0);
     setupViewports();
+    setupCam(0);
+
     
     x_pos = 80;
 	cam.getMouseInputEnabled();
@@ -33,80 +34,95 @@ void testApp::setup(){
 	gui.add(center.set("center",ofVec2f(ofGetWidth()*.5,ofGetHeight()*.5),ofVec2f(0,0),ofVec2f(ofGetWidth(),ofGetHeight())));
 	gui.add(color.set("color",ofColor(100,100,140),ofColor(0,0),ofColor(255,255)));
 	gui.add(circleResolution.set("circleRes", 5, 3, 90));
-	gui.add(twoCircles.setup("twoCircles"));
-	gui.add(ringButton.setup("ring"));
+	gui.add(drawSides.setup("draw Sides",false));
+	gui.add(drawKinect.setup("draw Kinect", true));
 	gui.add(screenSize.set("screenSize", ""));
-    
-    icoNormals[0] = ofVec3f(0.000f,  0.000f,  1.000f); // 0
-    icoNormals[1] = ofVec3f(-0.724f,  0.526f,  0.447f); // 3
-    icoNormals[2] = ofVec3f(-0.724f, -0.526f,  0.447f); // 4
-
+    gui.add(coeff.set("coef", 0.5, 0, 1));
+    gui.add(pos.set("pos", ofVec3f(0,0,0), ofVec3f(-2,-2,-2), ofVec3f(2,2,2)));
     
     font.loadFont("type/verdana.ttf", 100, true, false, true, 0.4, 72);
 	doShader = false;
     
     x_pos=0, y_pos=60;
-    
-    int i, j = 0;
-    for ( i = 0; i < 12; i++ )
-    {
         
-        c[i].r = ofRandom(1.0);
-        c[i].g = ofRandom(1.0);
-        c[i].b = ofRandom(1.0);
-        
-        v[i][0] = Verts[j] * 100.f;
-        j++;
-        v[i][1] = Verts[j] * 100.f;
-        j++;
-        v[i][2] = Verts[j] * 100.f;
-        j++;
-        
-    }
-    
-//    vbo.setVertexData( &icoVerts[0], 12, GL_STATIC_DRAW );
-//    vbo.setColorData( &c[0], 12, GL_STATIC_DRAW );
-//    vbo.setIndexData( &Faces[0], 60, GL_STATIC_DRAW );
     icoMesh = icoUtils::get_vertices();
-
-//    icoMesh.addVertices(&icoVerts[0], 12);
-//    icoMesh.addIndices(&Faces[0], 60);
-//    icoMesh.addIndices(&icoIndices);
 
     boxMesh.addVertices(&boxVertices[0], 8);
 //	boxMesh.addNormals(boxNormals,8);
 	boxMesh.addIndices(boxIndices, 3*2*6);
 //    boxMesh = boxMesh.box(1.0f, 0.8f, 0.8f);
-    
+    boxMesh.box(0.2f, 1.5f, 1.5f);
+
     glEnable(GL_DEPTH_TEST);
 //    glEnable(GL_CULL_FACE);
     
+    // --- KINECT ---
+//    kinect.setRegistration(true);
+
+	//kinect.init(true); // shows infrared instead of RGB video image
+//    kinect.init(true, false); // disable video image (faster fps)
+	
+//	kinect.open();		// opens first available kinect
+	//kinect.open(1);	// open a kinect by id, starting with 0 (sorted by serial # lexicographically))
+	//kinect.open("A00362A08602047A");	// open a kinect using it's unique serial #
+	
+	// print the intrinsic IR sensor values
+	if(kinect.isConnected()) {
+		ofLogNotice() << "sensor-emitter dist: " << kinect.getSensorEmitterDistance() << "cm";
+		ofLogNotice() << "sensor-camera dist:  " << kinect.getSensorCameraDistance() << "cm";
+		ofLogNotice() << "zero plane pixel size: " << kinect.getZeroPlanePixelSize() << "mm";
+		ofLogNotice() << "zero plane dist: " << kinect.getZeroPlaneDistance() << "mm";
+	}
+
+    kinectMesh.setMode(OF_PRIMITIVE_POINTS);
+    
+    kinectMesh.addVertices(kinectVerts, KINECT_W*KINECT_H);
+//	grayImage.allocate(kinect.width, kinect.height);
+
     // --- OUTPUT ---
     udpConnection.Create();
-	udpAvailable = udpConnection.Connect(RPI_HOST, RPI_PORT);
+	udpAvailable = udpConnection.Connect(RPI_HOST2, RPI_PORT);
 	udpConnection.SetNonBlocking(true);
-    udpAvailable = false;
+    udpAvailable = true;
 }
 
-// -- CAMERA --
+// --------- CAMERAS SETUP --------------
+
 void testApp::setupCam(int main_cam_num){
+    // setup points for each cam pos to grab triangles sides
+    triGrabPoints = new ofVec3f*[N_CAMERAS];
 
     for (int i=0; i<N_CAMERAS; i++) {
 //        cameras[i] = new ofEasyCam();
-        cameras[i] = new orthoCamera();
+//        cameras[i] = new orthoCamera();
+        cameras[i] = new ofCamera();
+        cameras[i]->setupPerspective(false);
+//        cameras[i]->setFov(0.f);
+//        cameras[i]->enableOrtho();
 
-//        cameras[i]->setNearClip(.75f);
-//        cameras[i]->setFarClip(1.f);
 
-//        cameras[i]->setPosition(icoVerts[icoUniqSides[i*3+0]]+icoUniqSides[Faces[i*3+1]]+icoUniqSides[Faces[i*3+2]]);
-        cameras[i]->setPosition(icoVerts[Faces[i*3+0]]+icoVerts[Faces[i*3+1]]+icoVerts[Faces[i*3+2]]);
+        cameras[i]->setPosition(
+            icoVerts[icoUniqSides[i*3+0]]+icoVerts[icoUniqSides[i*3+1]]+icoVerts[icoUniqSides[i*3+2]]
+        );
+//        cameras[i]->setPosition(icoVerts[Faces[i*3+0]]+icoVerts[Faces[i*3+1]]+icoVerts[Faces[i*3+2]]);
         cameras[i]->lookAt(ofVec3f(0.0f,  0.0f,  0.0f));
+        cameras[i]->dolly(-0.5f);
+        cameras[i]->setNearClip(.2f);
+        cameras[i]->setFarClip(1.1f);
+        
+        triGrabPoints[i] = new ofVec3f[3];
+        for (int j=0;j<3;j++) {
+            ofVec3f tmp =cameras[i]->worldToScreen(icoVerts[icoUniqSides[i*3+j]], viewGrid[i]);
+            tmp.x += 0.8;
+            triGrabPoints[i][j] =tmp;
+        };
     }
     cam.setupPerspective(false);
     
-    cam.setNearClip(1.0f);
-    cam.setFarClip(5.1f);
-    cam.setPosition(0.755f, -2.64f, -0.5f);
+    cam.setNearClip(.5f);
+    cam.setFarClip(10.1f);
+//    cam.setPosition(0.755f, -2.64f, -0.5f);
+    cam.setPosition(0, -2.64f, -2.5f);
     selectCam = 0;
 //    cam.setPosition(icoVerts[Faces[selectCam*3+0]]+icoVerts[Faces[selectCam*3+1]]+icoVerts[Faces[selectCam*3+2]]);
     // 1.907f, 1.387f, 3.087f
@@ -120,11 +136,11 @@ void testApp::setupCam(int main_cam_num){
 void testApp::setupViewports(){
 //	float xOffset = ofGetWidth() / 2;
 //	float yOffset = ofGetHeight() / (N_CAMERAS / 2);
-    float grid_w = 200;
+    float grid_w = 100;
     sideFbo.allocate(grid_w, grid_w, GL_RGBA);
 
     float xOffset = ofGetWidth()-grid_w*2;
-	float yOffset = 200;
+	float yOffset = 100;
     
 
 	viewMain.x = grid_w*2;
@@ -151,72 +167,77 @@ void testApp::setupViewports(){
 //--------------------------------------------------------------
 void testApp::update(){
     cam.setDistance(x_pos);
+    
+    kinect.update();
+	
+	// there is a new frame and we are connected
+	if(kinect.isFrameNew()) {
+		// load grayscale depth image from the kinect source
+//		grayImage.setFromPixels(kinect.getDepthPixels(), kinect.width, kinect.height);
+        int w = 640;
+        int h = 480;
+        
+        int step = 1, cnt = 0;
+        for(int y = 0; y < h; y += step) {
+            for(int x = 0; x < w; x += step, cnt++) {
+                if(kinect.getDistanceAt(x, y) > 0) {
+//                    kinectMesh.addColor(ofColor::fromHsb(kinect.getDistanceAt(x, y), 255, 255));
+                    kinectMesh.setVertex(cnt, kinect.getWorldCoordinateAt(x, y));
+                }
+            }
+        }
+    }
 }
 
 //--------------------------------------------------------------
 void testApp::draw(){
 
     ofEnableDepthTest();
-    glBlendEquationSeparate(GL_FUNC_ADD, GL_FUNC_ADD);
-    glBlendFuncSeparate(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA, GL_ONE, GL_ZERO);
 //    glBlendEquationSeparate(GL_FUNC_ADD, GL_FUNC_ADD);
-//    glBlendFuncSeparate(GL_ONE, GL_ONE_MINUS_SRC_ALPHA, GL_ONE, GL_ZERO);
+//    glBlendFuncSeparate(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA, GL_ONE, GL_ZERO);
+    glBlendEquationSeparate(GL_FUNC_ADD, GL_FUNC_ADD);
+    glBlendFuncSeparate(GL_ONE, GL_ONE_MINUS_SRC_ALPHA, GL_ONE, GL_ZERO);
     cam.begin(viewMain);
     
 //
-    doShader ? drawInIco() : drawScene(true);
+//
+    if (drawKinect == true) {
+        drawPointCloud();
+        icoMesh.draw(OF_MESH_WIREFRAME);
+    } else {
+        doShader ? drawInIco() : drawScene(true);  
+    }
+//    ofPixels * depth = kinect.getDepthPixelsRef();
+//    screenImg.setFromPixels(kinect.getDepthPixelsRef(), kinect.getHeight(), kinect.getWidth(), OF_IMAGE_GRAYSCALE);
+//    screenImg.draw(200, 200);
 
 //    drawScene(false);
-        ofSetColor(255, 255, 255);
-    for (int i=0; i<12; i++){
-		// we do a manual scale by scaling the mesh vertex coord by 50.f to render the point at the vertex position
-		ofDrawBitmapString(ofToString(i), icoVerts[i]);
-	}
 
 //    if (doShader) icoMesh.draw(OF_MESH_WIREFRAME);
 
     cam.end();
-
+//    kinectMesh.drawVertices();
     ofSetColor(0, 255, 255);
-    ofDrawSphere( cam.worldToScreen(icoVerts[0],viewMain), 1.f );
     ofDrawArrow(cam.worldToScreen(icoVerts[0],viewMain), cam.worldToScreen(icoVerts[1],viewMain));
     screenImg.grabScreen(viewMain.x, viewMain.y, viewMain.width, viewMain.height);
+
+    if (drawKinect == true) getSides(); // draw from diff sides and et colors
+    
+    // --- SEND IMG TO UDP ---
     drawToUdp(screenImg);
-
-    for(int i = 0; i < N_CAMERAS; i++){
-		ofSetColor(255, 255, 255);
-        ofNoFill();
-        ofRect(viewGrid[i]);
-//        sideFbo.begin();
-        cameras[i]->begin(viewGrid[i]);
-
-		!doShader ? drawScene(false) : drawInIco();
-//        tan(60) = (triPoints[1].y - triPoints[0].y) / (xtriPoints[1].x - triPoints[0].x);
-        ofFill();
-        ofSetColor(200, 200, 200);
-
-        for (int j=0; j<12; j++){
-            ofDrawBitmapString(ofToString(j), icoVerts[j]);
-        }
-        ofFill();
-		cameras[i]->end();
-        ofSetColor(0, 255, 255);
-        ofVec3f triPoints [] = {
-            icoVerts[Faces[i*3+0]]*cameras[i]->getModelViewMatrix(),
-            icoVerts[Faces[i*3+0]]*cameras[i]->getModelViewProjectionMatrix(),
-            cameras[i]->worldToScreen(icoVerts[Faces[i*3+0]], viewGrid[i]),
-            cameras[i]->worldToScreen(icoVerts[Faces[i*3+1]], viewGrid[i]),
-            cameras[i]->worldToScreen(icoVerts[Faces[i*3+2]], viewGrid[i])
-        };
-//        cameras[i]->getModelViewProjectionMatrix()
-        ofDrawSphere(triPoints[1], 1.f);
-        ofDrawSphere(triPoints[0], 1.f);
-//        sideFbo.end();
-//        sideFbo.
-//        sideFbo.draw(viewGrid[i].x, viewGrid[i].y, viewGrid[i].width, viewGrid[i].height);
+    
+    ofDisableDepthTest();
+    ofSetColor(255, 255, 255);
+    
+    for (int i=0; i<12; i++){
+		// we do a manual scale by scaling the mesh vertex coord by 50.f to render the point at the vertex position
+		ofDrawBitmapString(ofToString(i), cam.worldToScreen(icoVerts[i], viewMain));
+        
 	}
-	//
-
+    ofEnableDepthTest();
+    
+//	//
+//
     ofDisableDepthTest();
 //    glDepthFunc(GL_ALWAYS);
     ofSetColor(255.f, 255.f, 255.f);
@@ -235,51 +256,103 @@ void testApp::draw(){
 //    glDepthFunc(GL_LESS);
 }
 
+void testApp::getSides() {
+    for(int i = 0; i < N_CAMERAS; i++){
+		ofSetColor(255, 255, 255);
+        ofNoFill();
+        ofRect(viewGrid[i]);
+        //        sideFbo.begin();
+        cameras[i]->begin(viewGrid[i]);
+        
+		!doShader ? drawScene(false) : drawInIco();
+        //        tan(60) = (triPoints[1].y - triPoints[0].y) / (xtriPoints[1].x - triPoints[0].x);
+        ofFill();
+        ofSetColor(200, 200, 200);
+        
+        for (int j=0; j<12; j++){
+            ofDrawBitmapString(ofToString(j), icoVerts[j]);
+        }
+        ofFill();
+		cameras[i]->end();
+        
+        ofSetColor(255);
+        if (doShader) {
+            ofDrawArrow(triGrabPoints[i][1], triGrabPoints[i][0]);
+            ofDrawArrow(triGrabPoints[i][1], triGrabPoints[i][2]);
+            ofDrawArrow(triGrabPoints[i][0], triGrabPoints[i][2]);
+        }
+        ofDrawBitmapString(ofToString(i+0), triGrabPoints[i][0]);
+        ofDrawBitmapString(ofToString(i+1), triGrabPoints[i][1]);
+        ofDrawBitmapString(ofToString(i+2), triGrabPoints[i][2]);
+        //        float dist = sqrt(pow(triGrabPoints[i][0].x-triGrabPoints[i][2].x, 2)+pow(triGrabPoints[i][0].y-triGrabPoints[i][2].y, 2));
+        //        ofDrawBitmapString(ofToString(dist), triGrabPoints[i][0]+triGrabPoints[i][2]);
+        //        ofDrawSphere(triPoints[0], 1.f);
+        //        sideFbo.end();
+        //        sideFbo.
+        //        sideFbo.draw(viewGrid[i].x, viewGrid[i].y, viewGrid[i].width, viewGrid[i].height);
+	}
+
+}
+
 void testApp::drawScene(bool is_main) {
 
 //    ofSetBackgroundColor(10, 10, 10);
     glEnable(GL_DEPTH_TEST);
     ofSetColor(0, 200, 255);
+    glLineWidth(.5f);
     
-    ofNoFill();
+    if (!doShader)icoMesh.draw(OF_MESH_WIREFRAME);
 
-    glLineWidth(2.0f);
-    //    glCullFace(GL_FRONT);
-    
-    icoMesh.draw(OF_MESH_WIREFRAME);
-ofFill();
-//    ofSpere(0, 0, 0, 2.5f*sin(ofGetFrameNum()*.01f), 2.5f*sin(ofGetFrameNum()*.01f));
-    ofSetColor(0, 255.0f * sin(ofGetFrameNum()*1.0f), 100, 150);
-//    ofSpherePrimitive(2.5f*sin(ofGetFrameNum()*.01f), 60);
+    ofFill();
+//    ofSetColor(0, 255.0f * sin(ofGetFrameNum()*.8f), 100, 250);
+    ofSetColor(HsvToRgb(300*sin(ofGetFrameNum()*.03f), 255, 255));
 //    ofDrawSphere( 1.5f*sin(ofGetFrameNum()*.07f));
-    ofDrawSphere(1.0f*sin(ofGetFrameNum()*.07f), 1.f*cos(ofGetFrameNum()*.07f), .0f,  .6f);//sin(ofGetFrameNum()*.02f)
+//    ofDrawSphere(1.0f*sin(ofGetFrameNum()*coeff), 1.f*cos(ofGetFrameNum()*coeff), .0f,  .6f);//sin(ofGetFrameNum()*.02f)
 
 //    boxMesh.box( 1.2f*sin(ofGetFrameNum()*.1f) );
-//
-//    ofxCarveCSG booleanOperator;
-//    resultCsg = booleanOperator.meshSetToOfMesh(booleanOperator.booleanOperation(ofxCarveCSG::INTERSECTION, booleanOperator.ofMeshToMeshSet(icoMesh), booleanOperator.ofMeshToMeshSet(boxMesh)));
 //    boxMesh = boxMesh.xbox(1.5f*cos(ofGetFrameNum()*.06f), 1.5f, 1.5f);
-//    boxMesh.drawInMesh(icoMesh);
-//    resultCsg.draw();
 //    ofDrawBox(1.2f*sin(ofGetFrameNum()*.1f));
     
-    ofSetColor(200.0f*sin(ofGetFrameNum()*.01f), 200, 0, 100);
-    ofDrawCone(0, 0, 0, 1.0f*sin(ofGetFrameNum()*.01f), 1.5f*sin(ofGetFrameNum()*.07f));
-    
+//    ofSetColor(200.0f*sin(ofGetFrameNum()* coeff * .1f), 200, 0, 200);
+//    ofDrawCone(0, 0, 0, 1.0f*sin(ofGetFrameNum()*.05f), 1.5f*sin(ofGetFrameNum()*.07f));
+    ofSetColor(color);
+    pos.set(1.5*ofVec3f(sin(ofGetFrameNum()*coeff), 0, 0));
+    ofDrawBox(pos, .2f, 3.f, 3.f);
 //    ofPushMatrix();
 //        //    ofTranslate(0, 0, 0);
-//        ofTranslate(0, 1-2*sin(ofGetFrameNum()*.05f), 0);
+//        ofTranslate(pos);
 //        boxMesh.draw();
 //    ofPopMatrix;
-    
-    ofSetColor(150, 0, 200.0f*sin(ofGetFrameNum()*.01f), 200);
-    ofDrawSphere(0.0f, .0f, 0.0f, 1.f*cos(ofGetFrameNum()*0.05f));
-    
-//    glDonut(0, 0, 50, 5, 0.0f, 0.0f, 1.0f, 0.3f);
+//    ofSetColor(150, 0, 200.0f*sin(ofGetFrameNum()*.01f), 200);
+    ofSetColor(color);
+//    ofDrawSphere(0.0f, .0f, 0.0f, 1.f*cos(ofGetFrameNum()*0.05f));
 
-//    ofDrawPlane(0, 0, 0, 2.0f*sin(ofGetFrameNum()*.01f), 2.0f*sin(ofGetFrameNum()*.01f));
-//
+}
+
+void testApp::drawPointCloud() {
+
+//	ofMesh mesh;
+//	mesh.setMode(OF_PRIMITIVE_POINTS);
+	int step = 2;
+	for(int yp = 0; yp < KINECT_H; yp += step) {
+		for(int x = 0; x < KINECT_W; x += step) {
+			if(kinect.getDistanceAt(x, yp) > 0) {
+//				kinectMesh.setColor(yp*x, HsvToRgb(ofMap(kinect.getDistanceAt(x, yp), 0, 3000, 0, 360), 255, 255));
+//				kinectMesh.setVertex(yp*x, ofVec3f(x, yp, kinect.getDistanceAt(x, yp)));
+			}
+		}
+	}
+//    printf("%f x %f x %f ",300, 240, kinect.getDistanceAt(300, 240));
     
+	glPointSize(2);
+	ofPushMatrix();
+	// the projected points are 'upside down' and 'backwards'
+	ofScale(1, -1, -1);
+	ofTranslate(0, 0, -100); // center the points a bit
+	ofEnableDepthTest();
+	kinectMesh.drawVertices();
+	ofDisableDepthTest();
+	ofPopMatrix();
 }
 
 void testApp::drawToUdp(ofImage img) {
@@ -287,16 +360,12 @@ void testApp::drawToUdp(ofImage img) {
         unsigned char * pix = img.getPixels();
         char to_leds [N_LEDS*3];
         for (int i = 0; i<N_LEDS; i++ ) {
-            //        leds[i] = screenImg.getColor(ofGetWidth()/2, 200+i);
-            //        memccpy((to_leds[i*3+0], (char)pix[ofGetWidth()/2*(200+i)+0]
+
             ofColor cl = img.getColor(viewMain.width/2, ofGetHeight()/2-N_LEDS/2+i);
-            //        to_leds[i*3+0] = (char)pix[ofGetWidth()/2*(200+i)+0];
-            //        to_leds[i*3+1] = (char)pix[ofGetWidth()/2*(200+i)+1];
-            //        to_leds[i*3+2] = (char)pix[ofGetWidth()/2*(200+i)+2];
             to_leds[i*3+0] = (char)cl.r;
             to_leds[i*3+1] = (char)cl.b;
             to_leds[i*3+2] = (char)cl.g;
-    //        printf("%02X %02X %02X \n", to_leds[i*3+0], to_leds[i*3+1], to_leds[i*3+2]);
+    //        printf("%02X %02X %02X \n", sto_leds[i*3+0], to_leds[i*3+1], to_leds[i*3+2]);
         }
     //    printf("\n \n");
         udpConnection.Send(to_leds, N_LEDS*3);
@@ -357,33 +426,6 @@ void testApp::windowResized(int w, int h){}
 void testApp::gotMessage(ofMessage msg){}
 void testApp::dragEvent(ofDragInfo dragInfo){}
 
-// void testApp::drawFirstInSecond ( void (*first)(), void (*second)() )
-void testApp::drawFirstInSecond ( )
-{
-    glClear(GL_COLOR_BUFFER_BIT|GL_DEPTH_BUFFER_BIT|GL_STENCIL_BUFFER_BIT);
-    glEnable      ( GL_STENCIL_TEST );
-    
-    glStencilFunc ( GL_ALWAYS, 1, 0 );
-//    glStencilOp   ( GL_KEEP, GL_KEEP, GL_REPLACE );
-    glStencilOp ( GL_KEEP, GL_KEEP,GL_KEEP);
-    
-    drawScene(false);
-    
-    glStencilFunc ( GL_ALWAYS, 2, 0 );
-    glStencilOp   ( GL_KEEP, GL_KEEP, GL_REPLACE );
-    
-    icoMesh.draw();
-
-    glClear(GL_COLOR_BUFFER_BIT|GL_DEPTH_BUFFER_BIT);
-    
-    glStencilFunc(GL_EQUAL, 1, 255);
-    
-//    icoMesh.draw();
-    drawScene(false);
-    
-    glDisable     ( GL_STENCIL_TEST );
-}
-
 void testApp::drawInIco() {
     glClear(GL_DEPTH_BUFFER_BIT);
     glEnable(GL_STENCIL_TEST);
@@ -413,16 +455,8 @@ void testApp::drawInIco() {
 }
 
 
-void testApp::fixDepth ()
+void testApp::exit ()
 {
-//    glClear(GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT | GL_COLOR_BUFFER_BIT);
-    glColorMask ( GL_FALSE, GL_FALSE, GL_FALSE, GL_FALSE );
-    glEnable    ( GL_DEPTH_TEST );
-    glDisable   ( GL_STENCIL_TEST );
-    glDepthFunc ( GL_ALWAYS );
-    
-//    draw ();
-    icoMesh.draw();
-    
-    glDepthFunc ( GL_LESS );
+    kinect.setCameraTiltAngle(0); // zero the tilt on exit
+	kinect.close();
 }

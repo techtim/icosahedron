@@ -3,15 +3,22 @@
 #include "ofMain.h"
 #include "ofxGui.h"
 #include "icoUtils.h"
-#include "ofxCarveCSG.h"
 #include "ofxNetwork.h"
 #include "ofxMesh.h"
 #include "OrthoCamera.h"
 
+//#include "ofxOpenCv.h"
+#include "ofxKinect.h"
+
 #define N_CAMERAS 12
-#define N_LEDS 800
-#define RPI_HOST "192.168.2.222"
+//#define N_LEDS 800
+#define N_LEDS 640
+#define RPI_HOST1 "192.168.2.222"
+#define RPI_HOST2 "192.168.2.223"
 #define RPI_PORT 2525
+
+#define KINECT_W 640
+#define KINECT_H 480
 
 class testApp : public ofBaseApp{
 	public:
@@ -24,7 +31,11 @@ class testApp : public ofBaseApp{
         void drawInIco();
         void drawToUdp(ofImage img);
 
-        void fixDepth ();
+        void drawPointCloud();
+
+        void getSides();
+    
+        void exit();
     
 		void keyPressed(int key);
 		void keyReleased(int key);
@@ -49,20 +60,34 @@ class testApp : public ofBaseApp{
         ofFloatColor c[20];
         ofFloatColor cWhite[20];
 
+        /// --- CAMERAS SETUP ---
         ofEasyCam cam;
-        orthoCamera * cameras[N_CAMERAS];
+//        orthoCamera * cameras[N_CAMERAS];
 //        ofEasyCam * cameras[N_CAMERAS];
-    
+        ofCamera * cameras[N_CAMERAS];
         ofFbo sideFbo;
-    
         unsigned int selectCam;
         //viewports
         ofRectangle viewMain;
         ofRectangle viewGrid[N_CAMERAS];
 
+        // --- KINECT ---
+        ofxKinect kinect;
+//        ofxGrayscaleImage grayImage;
+//        ofxCvContourFinder contourFinder;
+
+        ofVboMesh kinectMesh;
+        ofVec3f kinectVerts[KINECT_W*KINECT_H];
+        bool bThreshWithOpenCV;
+        bool bDrawPointCloud;
+        
+        int nearThreshold;
+        int farThreshold;
+
+    
         ofVbo vbo;
         
-        ofMesh boxMesh, icoMesh, resultCsg;
+        ofVboMesh boxMesh, icoMesh, resultCsg;
         ofVbo boxVbo;
         ofVec3f icoSpin;
         ofVec3f icoNormals[3];
@@ -78,15 +103,19 @@ class testApp : public ofBaseApp{
         ofParameter<ofVec2f> center;
         ofParameter<int> circleResolution;
         ofParameter<bool> filled;
-        ofxButton twoCircles;
-        ofxButton ringButton;
+        ofxButton drawSides;
+        ofxButton drawKinect;
+        ofParameter<int> shutter;
+        ofParameter<bool> lamp;
+        ofParameter<ofVec3f> pos;
+        ofParameter<float> coeff;
         ofParameter<string> screenSize;
     
         // --- OUTPUT ---
         ofxUDPManager udpConnection;
         ofImage screenImg;
         bool udpAvailable;
-    
+        ofVec3f ** triGrabPoints;
     
     
     
@@ -102,7 +131,7 @@ class testApp : public ofBaseApp{
             cameras[i]->setFarClip(1.f);
             
             //    cameras[i](0.0f, 0.0f, 5.0f);
-//            cameras[i]->setPosition(icoVerts[Faces[i*3+0]]+icoVerts[Faces[i*3+1]]+icoVerts[Faces[i*3+2]]);
+            cameras[i]->setPosition(icoVerts[Faces[i*3+0]]+icoVerts[Faces[i*3+1]]+icoVerts[Faces[i*3+2]]);
             cameras[i]->lookAt(ofVec3f(0.0f,  0.0f,  0.0f));
 //            cameras[i]->setDistance(1.75f);
         }
@@ -120,96 +149,43 @@ class testApp : public ofBaseApp{
         x_pos = 80;
         cam.getMouseInputEnabled();
     }
-
-};
-
-//const ofIndexType Faces[] = {
-//    2, 1, 0,
-//    3, 2, 0,
-//    4, 3, 0,
-//    5, 4, 0,
-//    1, 5, 0,
-//    11, 6,  7,
-//    11, 7,  8,
-//    11, 8,  9,
-//    11, 9,  10,
-//    11, 10, 6,
-//    1, 2, 6,
-//    2, 3, 7,
-//    3, 4, 8,
-//    4, 5, 9,
-//    5, 1, 10,
-//    2,  7, 6,
-//    3,  8, 7,
-//    4,  9, 8,
-//    5, 10, 9,
-//    1, 6, 10 };
-//const float Verts[] = {
-//    0.000f,  0.000f,  1.000f,
-//    0.894f,  0.000f,  0.447f,
-//    0.276f,  0.851f,  0.447f,
-//    -0.724f,  0.526f,  0.447f,
-//    -0.724f, -0.526f,  0.447f,
-//    0.276f, -0.851f,  0.447f,
-//    0.724f,  0.526f, -0.447f,
-//    -0.276f,  0.851f, -0.447f,
-//    -0.894f,  0.000f, -0.447f,
-//    -0.276f, -0.851f, -0.447f,
-//    0.724f, -0.526f, -0.447f,
-//    0.000f,  0.000f, -1.000f };
-//
-//const ofVec3f icoVerts[] = {
-//    ofVec3f(0.000f,  0.000f,  1.000f),
-//    ofVec3f(0.894f,  0.000f,  0.447f),
-//    ofVec3f(0.276f,  0.851f,  0.447f),
-//    ofVec3f(-0.724f,  0.526f,  0.447f),
-//    ofVec3f(-0.724f, -0.526f,  0.447f),
-//    ofVec3f(0.276f, -0.851f,  0.447f),
-//    ofVec3f(0.724f,  0.526f, -0.447f),
-//    ofVec3f(-0.276f,  0.851f, -0.447f),
-//    ofVec3f(-0.894f,  0.000f, -0.447f),
-//    ofVec3f(-0.276f, -0.851f, -0.447f),
-//    ofVec3f(0.724f, -0.526f, -0.447f),
-//    ofVec3f(0.000f,  0.000f, -1.000f)
-//};
-//
-//const ofVec3f icoIndices[] = {
-//    ofVec3f(2, 1, 0),
-//    ofVec3f(3, 2, 0),
-//    ofVec3f(4, 3, 0),
-//    ofVec3f(5, 4, 0),
-//    ofVec3f(1, 5, 0),
-//    ofVec3f(11, 6,  7),
-//    ofVec3f(11, 7,  8),
-//    ofVec3f(11, 8,  9),
-//    ofVec3f(11, 9,  10),
-//    ofVec3f(11, 10, 6),
-//    ofVec3f(1, 2, 6),
-//    ofVec3f(2, 3, 7),
-//    ofVec3f(3, 4, 8),
-//    ofVec3f(4, 5, 9),
-//    ofVec3f(5, 1, 10),
-//    ofVec3f(2,  7, 6),
-//    ofVec3f(3,  8, 7),
-//    ofVec3f(4,  9, 8),
-//    ofVec3f(5, 10, 9),
-//    ofVec3f(1, 6, 10)
-//};
-
-const ofIndexType icoUniqSides[] = {
-    0, 1, 2, //0
-    0, 4, 5, //1
-    0, 4, 3, //2
-    4, 9, 8, //3
-    3, 8, 7,
-    3, 7, 2,
-    2, 6, 1,
-    1, 10, 5, //7
-    5, 10, 9, //8
-    7, 6, 11, //9
-    10, 6, 11,
-    8, 9, 11, //11
     
+    ofColor HsvToRgb (float hue, float satur, float value )
+    {
+        float r=0, g=0, b=0, fr, q, t, p;
+        int i, H;
+        ofColor rgbColor;
+        rgbColor.set(r, g, b, 0);
+        H = (int)(hue / 60);
+        fr = hue/60 - H;
+        p = (value * (255 - satur))/255;
+        q = (value * (255 - satur * fr))/255;
+        t = (value * (255 - satur * (1.0 - fr)))/255;
+        switch (H) {
+            case 0:
+                rgbColor.set(value, t, p, value);
+                break;
+            case 1:
+                rgbColor.set(q, value, p, value);
+                break;
+            case 2:
+                rgbColor.set(p, value, t, value);
+                break;
+            case 3:
+                rgbColor.set(p, q, value, value);
+                break;
+            case 4:
+                rgbColor.set(t, p, value, value);
+                break;
+            case 5:
+                rgbColor.set(value, p, q, value);
+                break;
+            default:
+                rgbColor.set(255, 255, 255, 255);
+        }
+        return rgbColor;
+    }
+
 };
 
 const ofVec3f boxVertices[] = {
