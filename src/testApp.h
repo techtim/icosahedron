@@ -6,9 +6,10 @@
 #include "ofxNetwork.h"
 #include "ofxMesh.h"
 #include "OrthoCamera.h"
+#include "ofxOsc.h"
+#include "Scene.h"
 
-//#include "ofxOpenCv.h"
-#include "ofxKinect.h"
+#include "ofxOpenCv.h"
 
 #define N_CAMERAS 12
 //#define N_LEDS 800
@@ -16,6 +17,10 @@
 #define RPI_HOST1 "192.168.2.222"
 #define RPI_HOST2 "192.168.2.223"
 #define RPI_PORT 2525
+
+#define KINECT_OSC_HOST "localhost"
+#define KINECT_OSC_PORT 1337
+//#define AUDIO_OSC_PORT 1337
 
 #define KINECT_W 640
 #define KINECT_H 480
@@ -46,7 +51,9 @@ class testApp : public ofBaseApp{
 		void windowResized(int w, int h);
 		void dragEvent(ofDragInfo dragInfo);
 		void gotMessage(ofMessage msg);
-        
+    
+        void onMessageReceived(ofxOscMessage &msg);
+    
         void glDonut(int x, int y, int rad, int inrad, float r, float g, float b, float a);
         void setupCam(int main_cam_num);
         void setupViewports();
@@ -72,9 +79,6 @@ class testApp : public ofBaseApp{
         ofRectangle viewGrid[N_CAMERAS];
 
         // --- KINECT ---
-        ofxKinect kinect;
-//        ofxGrayscaleImage grayImage;
-//        ofxCvContourFinder contourFinder;
 
         ofVboMesh kinectMesh;
         ofVec3f kinectVerts[KINECT_W*KINECT_H];
@@ -83,11 +87,10 @@ class testApp : public ofBaseApp{
         
         int nearThreshold;
         int farThreshold;
-
     
         ofVbo vbo;
         
-        ofVboMesh boxMesh, icoMesh, resultCsg;
+        ofVboMesh boxMesh, icoMesh;
         ofVbo boxVbo;
         ofVec3f icoSpin;
         ofVec3f icoNormals[3];
@@ -103,53 +106,37 @@ class testApp : public ofBaseApp{
         ofParameter<ofVec2f> center;
         ofParameter<int> circleResolution;
         ofParameter<bool> filled;
-        ofxButton drawSides;
-        ofxButton drawKinect;
+        ofParameter<bool> drawSides;
+        ofParameter<bool> drawKinect;
+        ofParameter<bool> sendUdp;
         ofParameter<int> shutter;
         ofParameter<bool> lamp;
         ofParameter<ofVec3f> pos;
         ofParameter<float> coeff;
         ofParameter<string> screenSize;
     
+        // --- INPUT ----
+        ofxOscReceiver oscKinect;
+
+        ofVec3f * kinectPos;
+        ofVec3f * kinectVel;
+        unsigned int * kinectLabels;
+    vector<ofVec3f> kinectPoints;
+    
+        // --- Audio ---
+        float  lowFol, midFol, hiFol;
+        int lowTrig, midTrig, hiTrig;
+    
         // --- OUTPUT ---
         ofxUDPManager udpConnection;
         ofImage screenImg;
+        ofImage sidesImg;
+        ofImage sidesGrabImg;
         bool udpAvailable;
         ofVec3f ** triGrabPoints;
-    
-    
-    
-    void setupCamAlter(int main_cam_num){
-        
-        for (int i=0; i<N_CAMERAS; i++) {
-//            cameras[i] = new ofEasyCam();
-//            cameras[i]->setupPerspective(true);
-            
-            //        cameras[i]->setNearClip(2.9f);
-            //        cameras[i]->setFarClip(3.1f);
-            cameras[i]->setNearClip(.75f);
-            cameras[i]->setFarClip(1.f);
-            
-            //    cameras[i](0.0f, 0.0f, 5.0f);
-            cameras[i]->setPosition(icoVerts[Faces[i*3+0]]+icoVerts[Faces[i*3+1]]+icoVerts[Faces[i*3+2]]);
-            cameras[i]->lookAt(ofVec3f(0.0f,  0.0f,  0.0f));
-//            cameras[i]->setDistance(1.75f);
-        }
-        cam.setupPerspective(true);
-        
-        cam.setNearClip(3.0f);
-        cam.setFarClip(5.1f);
-        cam.setPosition(0.755f, -2.64f, -0.5f);
-        selectCam = 0;
-        //    cam.setPosition(icoVerts[Faces[selectCam*3+0]]+icoVerts[Faces[selectCam*3+1]]+icoVerts[Faces[selectCam*3+2]]);
+        unsigned int ** indexGrabPixels;
+        cv::Mat sidesImageMat, udpImageMat;
 
-        cam.lookAt(ofVec3f(0.0f,  0.0f,  0.0f));
-
-        cam.setDistance(2.f);
-        x_pos = 80;
-        cam.getMouseInputEnabled();
-    }
-    
     ofColor HsvToRgb (float hue, float satur, float value )
     {
         float r=0, g=0, b=0, fr, q, t, p;

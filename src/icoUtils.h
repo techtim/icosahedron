@@ -1,6 +1,9 @@
 #pragma once
 
 #include "ofMain.h"
+#include "ofxNetwork.h"
+#include "ofxOpenCv.h"
+
 
 const ofIndexType Faces[] = {
     2, 1, 0, //0
@@ -38,6 +41,20 @@ const ofIndexType icoUniqSides[] = {
     11, 6,  7, //9
     11, 10, 6, //10
     11, 8,  9, //11
+};
+
+const ofIndexType icoGrabSides[] = {
+    0, 1,
+    1, 2,
+    2, 0,
+    0, 5,
+    5, 1,
+    1, 6,
+    6, 2,
+    2, 3,
+    3, 0,
+    0, 4,
+    
 };
 
 const float Verts[] = {
@@ -92,6 +109,29 @@ const ofVec3f icoIndices[] = {
     ofVec3f(1, 6, 10)
 };
 
+// ---------------
+template <class T>
+void writeRaw(ostringstream& out, T data) {
+	out.write((char*) &data, sizeof(data));
+}
+
+template <class T>
+void readRaw(stringstream& stream, T& data) {
+	stream.read((char*) &data, sizeof(T));
+}
+// ---------------
+
+struct udpPoint {
+    ofVec3f pos;
+    ofVec3f vel;
+};
+
+#define UDP_POINTS_ID 1
+#define UDP_MAX_POINT 20
+#define UDP_MAX_PACKET 1024
+
+//using namespace cv;
+
 class icoUtils {
 public:
 
@@ -99,28 +139,69 @@ public:
         ofMesh ico;
         ico.addVertices(&icoVerts[0], 12);
         ico.addIndices(&Faces[0], 60);
-        return ico;
+//        return ico;
 //        ofxMeshUtils::calcNormals(ico);
 //        vector<ofVec3f> vertices = ico.getVertices();
-        ofMatrix4x4 ROTX = ofMatrix4x4::newRotationMatrix(10.9f,1,0,0);
-        ofMatrix4x4 R = ofMatrix4x4::newRotationMatrix(18,0,0,1);
+        vector<ofVec3f> vertices = ico.getVertices();
+        //    ofMatrix4x4 ROTX = ofMatrix4x4::newRotationMatrix(10.9f,1,0,0);
+        //    ofMatrix4x4 R = ofMatrix4x4::newRotationMatrix(18,0,0,1);
+        ofMatrix4x4 ROTX = ofMatrix4x4::newRotationMatrix(120.0f,1,0,0);
+        ofMatrix4x4 R = ofMatrix4x4::newRotationMatrix(54,0,0,1);
+        
         ofMatrix4x4 T = ofMatrix4x4::newTranslationMatrix(ofVec3f(0,0,0));
 
-        for (int i=0; i<12; i++) {
-            //        vertices[i] =
-            
-//            ofVec4f myVector = ofVec4f(vertices[i][0], vertices[i][1], vertices[i][2], 1.0f);
-            
-            // fill myMatrix and myVector somehow
-            //        myVector.
-            //        vertices[i].r
-            ofVec3f transformedVector = icoVerts[i]*R*ROTX*T;
-
-            ico.addVertex(transformedVector);
+        for (int i=0; i<vertices.size(); i++) {
+            ofVec3f transformedVector = vertices[i]*R*ROTX*T;
+            ico.setVertex(i, transformedVector);
             //        ico.setVertex(i, ofVec3f(transformedVector.x, transformedVector.y,transformedVector.z));
         }
-        ico.addIndices(&Faces[0], 60);
+
         return ico;
+    }
+    
+    static void drawMat(cv::Mat& mat, float x, float y, float width, float height) {
+		int glType;
+        cv::Mat buffer;
+
+        buffer = mat;
+
+		glType = GL_RGB;
+
+		ofTexture tex;
+		int w = buffer.cols;
+		int h = buffer.rows;
+		tex.allocate(w, h, glType);
+		tex.loadData(buffer.ptr(), w, h, glType);
+		tex.draw(x, y, width, height);
+	}
+    
+    static void readUdp (ofxUDPManager udpConnection, ofVec3f * points, ofVec3f * vels, unsigned int * labels  ) {
+        static char message[UDP_MAX_PACKET];
+        int messageLength = udpConnection.Receive(message, UDP_MAX_PACKET);
+        if(messageLength > 0) {
+
+            stringstream data;
+            data.write(message, messageLength);
+
+            unsigned short blockID;
+            
+            readRaw(data, blockID);
+            unsigned short numberBlocks;
+            readRaw(data, numberBlocks);
+
+            points = new ofVec3f [numberBlocks];
+            vels = new ofVec3f [numberBlocks];
+            labels = new unsigned int [numberBlocks];
+//            readRaw(data, blockSize);
+            
+            
+            for(int i = 0; i < numberBlocks; i++) {
+                readRaw(data, labels[i]);
+                readRaw(data, points[i]);
+                readRaw(data, vels[i]);
+            }
+        }
+
     }
 
 };
