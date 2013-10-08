@@ -2,6 +2,7 @@
 
 //--------------------------------------------------------------
 void testApp::setup(){
+    setupFinished =false;
     ofSetFrameRate(60);
     ofSetLogLevel(OF_LOG_VERBOSE);
 	ofBackground(0, 0, 0);
@@ -33,7 +34,7 @@ void testApp::setup(){
     gui.setup();
     gui.setup("panel"); // most of the time you don't need a name but don't forget to call setup
 	gui.add(filled.set("bFill", true));
-	gui.add(radius.set( "radius", 140, 10, 300 ));
+	gui.add(radius.set( "radius", 1, 0, 20 ));
 	gui.add(center.set("center",ofVec2f(ofGetWidth()*.5,ofGetHeight()*.5),ofVec2f(0,0),ofVec2f(ofGetWidth(),ofGetHeight())));
 	gui.add(color.set("color",ofColor(100,100,140,200),ofColor(0,0,0,0),ofColor(255,255,255,255)));
 	gui.add(circleResolution.set("circleRes", 5, 3, 90));
@@ -43,6 +44,7 @@ void testApp::setup(){
 	gui.add(screenSize.set("screenSize", ""));
     gui.add(coeff.set("coef", 0.1, 0, 1));
     gui.add(pos.set("pos", ofVec3f(0,0,0), ofVec3f(-2,-2,-2), ofVec3f(2,2,2)));
+    gui.setPosition(200, 20);
     
     font.loadFont("type/verdana.ttf", 100, true, false, true, 0.4, 72);
 	doShader = false;
@@ -67,7 +69,7 @@ void testApp::setup(){
     
     // --- OUTPUT ---
     udpConnection.Create();
-	udpAvailable = udpConnection.Connect(RPI_HOST1, RPI_PORT);
+	udpAvailable = udpConnection.Connect(RPI_HOST2, RPI_PORT);
 	udpConnection.SetNonBlocking(true);
 
     sidesImg.allocate(80, 30*2, OF_IMAGE_COLOR);
@@ -78,6 +80,7 @@ void testApp::setup(){
     }
 
 //    udpAvailable = true;
+    setupFinished =true;
 }
 
 // --------- CAMERAS SETUP --------------
@@ -102,7 +105,7 @@ void testApp::setupCam(int main_cam_num){
         cameras[i]->lookAt(ofVec3f(0.0f,  0.0f,  0.0f));
         cameras[i]->dolly(-0.5f);
         cameras[i]->setNearClip(.2f);
-        cameras[i]->setFarClip(1.1f);
+        cameras[i]->setFarClip(1.11f);
         
         triGrabPoints[i] = new ofVec3f[3];
         for (int j=0;j<3;j++) {
@@ -230,9 +233,8 @@ void testApp::draw() {
 
     if (drawSides == true) getSides(); // draw from diff sides and et colors
     
-    // --- SEND IMG TO UDP ---
-    drawToUdp(screenImg);
     
+//    udpImageMat.
     ofDisableDepthTest();
     ofSetColor(255, 255, 255);
     
@@ -264,6 +266,7 @@ void testApp::draw() {
 }
 
 void testApp::getSides() {
+//    if (!setupFinished) return;
 //    glEnable(GL_CULL_FACE);
 //    glCullFace (GL_FRONT);
     int i;
@@ -293,60 +296,102 @@ void testApp::getSides() {
     
 //    OF_IMAGE_COLORALPHA
     sidesGrabImg.grabScreen(viewGrid[0].x, viewGrid[0].y, viewGrid[N_CAMERAS-1].x+viewGrid[0].width, viewGrid[N_CAMERAS-1].y+viewGrid[N_CAMERAS-1].height);
-    sidesImageMat = cv::Mat(sidesGrabImg.height, sidesGrabImg.width, CV_8UC3,sidesGrabImg.getPixels(), 0);
-    udpImageMat = cv::Mat(40, 80, CV_8UC3);
+//    sidesGrabImg.setImageType(OF_IMAGE_COLOR);
+    sidesImageMat = cv::Mat(sidesGrabImg.height, sidesGrabImg.width, CV_8UC3, sidesGrabImg.getPixels(), 0);
+    udpImageMat = cv::Mat(36, 80, CV_8UC3);
+
 
     sidesImg.allocate(80, 36, OF_IMAGE_COLOR_ALPHA);
+//    sidesImg.setImageType(OF_IMAGE_COLOR);
+
     int row_cntr = 0;
-    for (i=0; i<N_CAMERAS;i++) {
-        ofVec2f vert1 = triGrabPoints[i][0];
-        ofVec2f vert2 = triGrabPoints[i][1];
-        for (int j=0;j<80;j++) {
-            ofVec2f tmp = vert1.getInterpolated(vert2, j*0.0125f);
-            udpImageMat.at<ofVec3f>(row_cntr, j) = sidesImageMat.at<ofVec3f>(tmp.y, tmp.x);
-//            ofColor_<unsigned char> col =  sidesGrabImg.getColor(tmp.x, tmp.y);
-//            memcpy(sidesImg.getPixels()[row_cntr*80+j], screenImg.getPixels()[int(tmp.y*screenImg.width+tmp.x)], sizeof(ofPixels));
-//            sidesImg.setColor(j, row_cntr, sidesGrabImg.getColor(tmp.x, tmp.y));
-//            ofVec3f bgrPixel = sidesImageMat.at<ofVec3f>(tmp.x, tmp.y);
-            
-//            sidesImg.setColor(j, row_cntr, ofColor(bgrPixel[2],bgrPixel[1],bgrPixel[0]));
-
-        }
-        indexGrabPixels[icoUniqSides[i*3+0]][icoUniqSides[i*3+1]] = row_cntr++;
-        vert1 = triGrabPoints[i][1];
-        vert2 = triGrabPoints[i][2];
-        int dist = vert1.distance(vert2);
-        for (int j=0;j<80;j++) {
-            ofVec2f tmp = vert1.getInterpolated(vert2, j*0.0125f);
-            udpImageMat.at<ofVec3f>(row_cntr, j) = sidesImageMat.at<ofVec3f>(tmp.y, tmp.x);
-//            ofColor col =  sidesGrabImg.getColor(tmp.x, tmp.y);
-//            sidesImg.getPixels()[row_cntr*80+j] = screenImg.getPixels()[int(tmp.y*screenImg.width+tmp.x)];
-//            ofVec3f bgrPixel = sidesImageMat.at<ofVec3f>(tmp.x, tmp.y);
-//            sidesImg.setColor(j, row_cntr, ofColor(bgrPixel[2],bgrPixel[1],bgrPixel[0]));
-
-        }
-        indexGrabPixels[icoUniqSides[i*3+1]][icoUniqSides[i*3+2]] = row_cntr++;
-        vert1 = triGrabPoints[i][2];
-        vert2 = triGrabPoints[i][0];
-
-        for (int j=0;j<80;j++) {
-            ofVec2f tmp = vert1.getInterpolated(vert2, j*0.0125f);
-            udpImageMat.at<ofVec3f>(row_cntr, j) = sidesImageMat.at<ofVec3f>(tmp.y, tmp.x);
-//            ofColor col =
-//            printf("%c  %c  %f \n",col.r,col.g,col.b);
-//            sidesImg.setColor(j, row_cntr, sidesGrabImg.getColor(tmp.x, tmp.y));
-//            ofVec3f bgrPixel = sidesImageMat.at<ofVec3f>(tmp.x, tmp.y);
-//            sidesImg.setColor(j, row_cntr, ofColor(bgrPixel[2],bgrPixel[1],bgrPixel[0]));
-        }
-        indexGrabPixels[icoUniqSides[i*3+2]][icoUniqSides[i*3+0]] = row_cntr++;
+    unsigned char *output = new unsigned char [40*80*3]  ; // (unsigned char*)(sidesImageMat.data);
         
+    unsigned int cntr = 0;
+    for (int cam=0; cam<N_CAMERAS; cam++) {
+        ofVec2f camVerts [] = {
+            ofVec2f(icoUniqSides[cam*3+0], icoUniqSides[cam*3+1]),
+            ofVec2f(icoUniqSides[cam*3+1], icoUniqSides[cam*3+2]),
+            ofVec2f(icoUniqSides[cam*3+2], icoUniqSides[cam*3+0]),
+        };
+ofSetColor(0, 255, 255);
+        for (int v_num=0; v_num<3; v_num++ ) {
+
+            for (int j=0;j<30;j++) {
+                        
+                if (camVerts[v_num].x == icoGrabSides[j].x && camVerts[v_num].y == icoGrabSides[j].y) {
+                    
+    //                    ofSetColor(rand()%255, rand()%255, rand()%255);
+                    ofVec2f vert1 = cameras[cam]->worldToScreen(icoMesh.getVertex(icoGrabSides[j].x), viewGrid[cam]);
+                    ofVec2f vert2 = cameras[cam]->worldToScreen(icoMesh.getVertex(icoGrabSides[j].y), viewGrid[cam]);
+                    ofSetColor(0, 255, 255);
+                    
+                    ofDrawBitmapString(ofToString(j), vert1);
+//                    ofDrawBitmapString(ofToString(j), vert2);
+//                    ofDrawSphere(vert1, 3);
+//                    ofDrawSphere(vert2, 3);
+                    for (int pix_num=0;pix_num<LEDS_NUM_IN_SIDE;pix_num++) {
+                        ofVec2f tmp = vert1.getInterpolated(vert2, (pix_num+2)*0.0120f);
+                        
+//                        ofDrawSphere(tmp, 1.);
+//                        udpImageMat.at<ofVec3f>(j, pix_num-1) = sidesImageMat.at<ofVec3f>((int)tmp.y, (int)tmp.x);
+                        ofColor col = sidesGrabImg.getColor((int)tmp.x, (int)tmp.y);
+                        output[j*LEDS_NUM_IN_SIDE*3+pix_num*3+0] = col.r;
+                        output[j*LEDS_NUM_IN_SIDE*3+pix_num*3+1] = col.b;
+                        output[j*LEDS_NUM_IN_SIDE*3+pix_num*3+2] = col.g;
+                    }
+                    cntr++;
+                    break;
+                } else if (camVerts[v_num].x == icoGrabSides[j].y && camVerts[v_num].y == icoGrabSides[j].x) {
+                    
+                    ofVec2f vert1 = cameras[cam]->worldToScreen(icoMesh.getVertex(icoGrabSides[j].y), viewGrid[cam]);
+                    ofVec2f vert2 = cameras[cam]->worldToScreen(icoMesh.getVertex(icoGrabSides[j].x), viewGrid[cam]);
+                    
+                    ofDrawBitmapString(ofToString(j), vert1);
+//                    ofDrawBitmapString(ofToString(j), vert2);
+//                    ofSetColor(255, 0, 0);
+//                    ofDrawSphere(vert1, 3);
+//                    ofDrawSphere(vert2, 3);
+                    for (int pix_num=0;pix_num<LEDS_NUM_IN_SIDE;pix_num++) {
+                        ofVec2f tmp = vert1.getInterpolated(vert2, (pix_num+2)*0.0120f);
+                        
+                        //                        ofDrawSphere(tmp, 1.);
+//                        udpImageMat.at<ofVec3f>(j, pix_num-1) = sidesImageMat.at<ofVec3f>((int)tmp.y, (int)tmp.x);
+                        ofColor col = sidesGrabImg.getColor(tmp.x, tmp.y).r;
+
+                        output[j*LEDS_NUM_IN_SIDE*3+pix_num*3+0] = col.r;
+                        output[j*LEDS_NUM_IN_SIDE*3+pix_num*3+1] = col.b;
+                        output[j*LEDS_NUM_IN_SIDE*3+pix_num*3+2] = col.g;
+                    }
+//                    printf("MAT J: %i  CAM: %i  CNTR: %i\n", j, cam, cntr);
+                    cntr++;
+                    break;
+
+                }
+                
+    //                ofVec3f tmp =cameras[i]->worldToScreen(icoMesh.getVertex(j)), viewGrid[cam]);
+    //                //            tmp.x += 0.8;
+    //                triGrabPoints[i][j] = tmp;
+    //                ofDrawSphere(tmp, 2);
+            };
+        };
+        triGrabPoints[cam][0],
+        triGrabPoints[cam][1];
+        for (int j=0; j<30; j++) {};
+            
     }
+    printf("CNTR: %i\n", cntr);
+//    printf("MAT COLS: %i  ROWS: %i  CNTR: %i\n", udpImageMat.cols, udpImageMat.rows, cntr);
+//    icoUtils::drawMat(udpImageMat, 20, 620, udpImageMat.cols, udpImageMat.rows);
+    // --- SEND IMG TO UDP ---
     ofSetColor(255);
-//    ofRect(20, 620, sidesImg.width, sidesImg.height);
-//    sidesImg.draw(20,620);
+    sidesImg.setFromPixels(output, 80, cntr, OF_IMAGE_COLOR);
+    sidesImg.draw(20, 620);
+    drawToUdp(output);
     
-    icoUtils::drawMat(udpImageMat, 20, 620, udpImageMat.cols, udpImageMat.rows);
-//    icoUtils::drawMat(sidesImageMat, 20, 620, sidesImageMat.cols, sidesImageMat.rows);
+    delete [] output;
+//    udpImageMat;
+//    icoUtils::drawMat(sidesImageMat, 0, 0, sidesImageMat.cols, sidesImageMat.rows);
 //    glDisable(GL_CULL_FACE);
 }
 
@@ -357,7 +402,7 @@ void testApp::drawScene(bool is_main) {
     ofSetColor(0, 200, 255);
     glLineWidth(.5f);
     
-//        icoMesh.draw(OF_MESH_WIREFRAME);
+//    icoMesh.draw(OF_MESH_WIREFRAME);
     
     if (kinectMesh.getNumVertices()>0){
         ofColor col = ofColor(255);
@@ -393,7 +438,7 @@ void testApp::drawScene(bool is_main) {
 //    ofPopMatrix;
 //    ofSetColor(150, 0, 200.0f*sin(ofGetFrameNum()*.01f), 200);
     ofSetColor(color);
-//    ofDrawSphere(0.0f, .0f, 0.0f, 1.f*cos(ofGetFrameNum()*0.05f));
+    ofDrawSphere(0.0f, .0f, 0.0f, radius*0.1);
 
 }
 
@@ -434,6 +479,22 @@ void testApp::drawToUdp(ofImage img) {
     }
 }
 
+void testApp::drawToUdp(unsigned char * pix) {
+    if (sendUdp) {
+//        img.at<ofColor>();
+        char to_leds [N_LEDS*3];
+        for (int i = 0; i<N_LEDS*3; i++ ) {
+            to_leds[i] = (char)pix[i];
+            //        printf("%02X %02X %02X \n", sto_leds[i*3+0], to_leds[i*3+1], to_leds[i*3+2]);
+        }
+        //    printf("\n \n");
+        udpConnection.Send(to_leds, N_LEDS*3);
+//        ofLine(ofGetWidth()/2+viewMain.width/2, ofGetHeight()/2-N_LEDS/2, ofGetWidth()/2+viewMain.width/2, ofGetHeight()/2+N_LEDS/2);
+    } else {
+        //        printf("Cant send UDP message \n");
+    }
+
+}
 
 //--------------------------------------------------------------
 void testApp::keyPressed(int key){

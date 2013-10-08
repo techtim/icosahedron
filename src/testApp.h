@@ -13,10 +13,12 @@
 
 #define N_CAMERAS 12
 //#define N_LEDS 800
-#define N_LEDS 640
-#define RPI_HOST1 "192.168.2.222"
+#define N_LEDS 800
+#define RPI_HOST1 "192.168.2.50"
 #define RPI_HOST2 "192.168.2.223"
 #define RPI_PORT 2525
+
+#define LEDS_NUM_IN_SIDE 80
 
 #define KINECT_OSC_HOST "localhost"
 #define KINECT_OSC_PORT 1337
@@ -35,6 +37,7 @@ class testApp : public ofBaseApp{
         void drawFirstInSecond ();
         void drawInIco();
         void drawToUdp(ofImage img);
+        void drawToUdp(unsigned char * img);
 
         void drawPointCloud();
 
@@ -57,7 +60,9 @@ class testApp : public ofBaseApp{
         void glDonut(int x, int y, int rad, int inrad, float r, float g, float b, float a);
         void setupCam(int main_cam_num);
         void setupViewports();
-                
+               
+        bool setupFinished;
+    
         ofShader shader;
         bool doShader;
         vector<ofPoint> points;
@@ -134,6 +139,7 @@ class testApp : public ofBaseApp{
         ofImage sidesGrabImg;
         bool udpAvailable;
         ofVec3f ** triGrabPoints;
+        ofVec3f * sidesGrabPoints;
         unsigned int ** indexGrabPixels;
         cv::Mat sidesImageMat, udpImageMat;
 

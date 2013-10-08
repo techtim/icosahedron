@@ -43,18 +43,45 @@ const ofIndexType icoUniqSides[] = {
     11, 8,  9, //11
 };
 
-const ofIndexType icoGrabSides[] = {
-    0, 1,
-    1, 2,
-    2, 0,
-    0, 5,
-    5, 1,
-    1, 6,
-    6, 2,
-    2, 3,
-    3, 0,
-    0, 4,
+struct grabStruct {
+    unsigned int camNum;
+    ofVec2f point;
+};
+
+// first ofVec3f(cam_num, vert.x, vert.y)
+const ofVec2f icoGrabSides[] = {
+    ofVec2f(0, 1),
+    ofVec2f(1, 2),
+    ofVec2f(2, 0),
+    ofVec2f(0, 5),
+    ofVec2f(5, 1),
+    ofVec2f(1, 6),
+    ofVec2f(6, 2),
+	ofVec2f(2, 3),
+	ofVec2f(3, 0),
+    ofVec2f(0, 4),
     
+	ofVec2f(1, 10),
+	ofVec2f(10, 9),
+	ofVec2f(9, 5),
+	ofVec2f(5, 4),
+	ofVec2f(4, 3),
+	ofVec2f(3, 7),
+    ofVec2f(7, 6),
+    ofVec2f(6, 10),
+    ofVec2f(10,5), // 5 drop to 10
+    ofVec2f(10,11),
+    ofVec2f(11,6),
+    
+    ofVec2f(2, 7),
+    ofVec2f(7, 8),
+    ofVec2f(8,11),
+    ofVec2f(11,9),
+    ofVec2f(9, 8),
+    ofVec2f(8, 3), // 3 drop to 7
+    ofVec2f(7,11), //11 drop to 8
+    ofVec2f(8, 4),
+    ofVec2f(4, 9),
 };
 
 const float Verts[] = {
@@ -205,3 +232,51 @@ public:
     }
 
 };
+
+
+//    for (i=0; i<N_CAMERAS;i++) {
+//        icoMesh.getVertex(<#ofIndexType i#>)
+//        //ofVec2f vert1 =cameras[i]->worldToScreen(icoMesh.getVertices()[icoUniqSides[i*3+j]], viewGrid[i]);
+//        //ofVec2f vert2 =cameras[i]->worldToScreen(icoMesh.getVertices()[icoUniqSides[i*3+j]], viewGrid[i]);
+//        ofVec2f vert1 = triGrabPoints[i][0];
+//        ofVec2f vert2 = triGrabPoints[i][1];
+//        for (int j=0;j<80;j++) {
+//            ofVec2f tmp = vert1.getInterpolated(vert2, j*0.0125f);
+//            ofDrawSphere(tmp.x, tmp.x, 1.f);
+//            udpImageMat.at<ofVec3f>(row_cntr, j) = sidesImageMat.at<ofVec3f>(tmp.y, tmp.x);
+//
+//            ofSetColor(sidesGrabImg.getColor(tmp.x, tmp.y));
+//            ofSetColor(255);
+//            if (j %2 ==0) ofDrawSphere(tmp.x, tmp.x, 1.f);
+//            ofColor_<unsigned char> col =  sidesGrabImg.getColor(tmp.x, tmp.y);
+//            memcpy(sidesImg.getPixels()[row_cntr*80+j], screenImg.getPixels()[int(tmp.y*screenImg.width+tmp.x)], sizeof(ofPixels));
+//            sidesImg.setColor(j, row_cntr, sidesGrabImg.getColor(tmp.x, tmp.y));
+//            ofVec3f bgrPixel = sidesImageMat.at<ofVec3f>(tmp.x, tmp.y);
+//
+//            sidesImg.setColor(j, row_cntr, ofColor(bgrPixel[2],bgrPixel[1],bgrPixel[0]));
+//
+//        }
+//        indexGrabPixels[icoUniqSides[i*3+0]][icoUniqSides[i*3+1]] = row_cntr++;
+//        vert1.set(triGrabPoints[i][1]);
+//        vert2.set(triGrabPoints[i][2]);
+//        int dist = vert1.distance(vert2);
+//        for (int j=0;j<80;j++) {
+//            ofVec2f tmp = vert1.getInterpolated(vert2, j*0.0125f);
+//            udpImageMat.at<ofVec3f>(row_cntr, j) = sidesImageMat.at<ofVec3f>(tmp.y, tmp.x);
+//
+//            ofSetColor(255);
+//            if (j %2 ==0) ofDrawSphere(tmp.x, tmp.x, 1.f);
+//        }
+//        indexGrabPixels[icoUniqSides[i*3+1]][icoUniqSides[i*3+2]] = row_cntr++;
+//        vert1 = triGrabPoints[i][2];
+//        vert2 = triGrabPoints[i][0];
+//
+//        for (int j=0;j<80;j++) {
+//            ofVec2f tmp = vert1.getInterpolated(vert2, j*0.0125f);
+//            udpImageMat.at<ofVec3f>(row_cntr, j) = sidesImageMat.at<ofVec3f>(tmp.y, tmp.x);
+//
+//            ofSetColor(255);
+//            ofDrawSphere(tmp.x, tmp.x, 1.f);
+//        }
+//        indexGrabPixels[icoUniqSides[i*3+2]][icoUniqSides[i*3+0]] = row_cntr++;
+//    }
