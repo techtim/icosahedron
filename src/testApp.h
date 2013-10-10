@@ -7,15 +7,17 @@
 #include "ofxMesh.h"
 #include "OrthoCamera.h"
 #include "ofxOsc.h"
-#include "Scene.h"
+#include "icoScene.h"
 
 #include "ofxOpenCv.h"
 
 #define N_CAMERAS 12
 //#define N_LEDS 800
-#define N_LEDS 800
+#define N_LEDS 400
+#define SCENES_NUM 10
+
 #define RPI_HOST1 "192.168.2.50"
-#define RPI_HOST2 "192.168.2.223"
+#define RPI_HOST2 "192.168.2.51" //223"
 #define RPI_PORT 2525
 
 #define LEDS_NUM_IN_SIDE 80
@@ -60,7 +62,7 @@ class testApp : public ofBaseApp{
         void glDonut(int x, int y, int rad, int inrad, float r, float g, float b, float a);
         void setupCam(int main_cam_num);
         void setupViewports();
-               
+        
         bool setupFinished;
     
         ofShader shader;
@@ -118,6 +120,9 @@ class testApp : public ofBaseApp{
         ofParameter<bool> lamp;
         ofParameter<ofVec3f> pos;
         ofParameter<float> coeff;
+        ofParameter<int> scene_num;
+        ofParameter<int> sceneSel1;
+        ofParameter<int> sceneSel2;
         ofParameter<string> screenSize;
     
         // --- INPUT ----
@@ -141,8 +146,16 @@ class testApp : public ofBaseApp{
         ofVec3f ** triGrabPoints;
         ofVec3f * sidesGrabPoints;
         unsigned int ** indexGrabPixels;
-        cv::Mat sidesImageMat, udpImageMat;
+//        cv::Mat sidesImageMat, udpImageMat;
 
+        // --- SCENES ---
+        void setupScenes();
+//        icoScene * sceneManager[SCENES_NUM];
+        vector <icoScene *> scenesVec;
+        icoScene1 iScene1;
+        icoScene2 iScene2;
+        
+    
     ofColor HsvToRgb (float hue, float satur, float value )
     {
         float r=0, g=0, b=0, fr, q, t, p;

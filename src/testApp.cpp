@@ -20,6 +20,7 @@ void testApp::setup(){
     setupViewports();
     setupCam(0);
 
+    setupScenes();
     
     x_pos = 80;
 	cam.getMouseInputEnabled();
@@ -31,32 +32,39 @@ void testApp::setup(){
     //	printf("Maximum number of output vertices support is: %i\n", shader.getGeometryMaxOutputCount());
     
     // -- GUI --
-    gui.setup();
+
+    ofxGuiSetDefaultWidth(300);
     gui.setup("panel"); // most of the time you don't need a name but don't forget to call setup
 	gui.add(filled.set("bFill", true));
 	gui.add(radius.set( "radius", 1, 0, 20 ));
 	gui.add(center.set("center",ofVec2f(ofGetWidth()*.5,ofGetHeight()*.5),ofVec2f(0,0),ofVec2f(ofGetWidth(),ofGetHeight())));
-	gui.add(color.set("color",ofColor(100,100,140,200),ofColor(0,0,0,0),ofColor(255,255,255,255)));
+	gui.add(color.set("color",ofColor(0,200,140,200),ofColor(0,0,0,0),ofColor(255,255,255,255)));
 	gui.add(circleResolution.set("circleRes", 5, 3, 90));
 	gui.add(drawSides.set("draw Sides",true));
 	gui.add(drawKinect.set("draw Kinect", false));
     gui.add(sendUdp.set("UDP", false));
 	gui.add(screenSize.set("screenSize", ""));
-    gui.add(coeff.set("coef", 0.1, 0, 1));
+    gui.add(coeff.set("coef", 0.01, 0, 1));
     gui.add(pos.set("pos", ofVec3f(0,0,0), ofVec3f(-2,-2,-2), ofVec3f(2,2,2)));
-    gui.setPosition(200, 20);
+    gui.add(scene_num.set("scene_num", 0, 0, SCENES_NUM));
+    gui.add(sceneSel1.set("Sel scene 1", 0, 0, SCENES_NUM));
+    gui.add(sceneSel2.set("Sel scene 2", 1, 0, SCENES_NUM));
     
+    gui.setPosition(200, 20);
+//    gui.setDefaultWidth(300);
+    
+
     font.loadFont("type/verdana.ttf", 100, true, false, true, 0.4, 72);
 	doShader = false;
     
     x_pos=0, y_pos=60;
 
-    boxMesh.addVertices(&boxVertices[0], 8);
+//    boxMesh.addVertices(&boxVertices[0], 8);
 //	boxMesh.addNormals(boxNormals,8);
-	boxMesh.addIndices(boxIndices, 3*2*6);
+//	boxMesh.addIndices(boxIndices, 3*2*6);
 //    boxMesh = boxMesh.box(1.0f, 0.8f, 0.8f);
-    boxMesh.box(0.2f, 1.5f, 1.5f);
-
+//    boxMesh.box(0.2f, 1.5f, 1.5f);
+    boxMesh = ofMesh::box(0.2f, 1.5f, 1.5f);
     glEnable(GL_DEPTH_TEST);
 //    glEnable(GL_CULL_FACE);
 
@@ -157,6 +165,21 @@ void testApp::setupViewports(){
 	}
 }
 
+void testApp::setupScenes() {
+//    icoScene * sa = ;
+    scenesVec.push_back(new icoScene0());
+    icoScene * sa = new icoScene1();
+    scenesVec.push_back(sa);
+    icoScene * se = new icoScene2();
+    scenesVec.push_back(se);
+    icoScene * sf = new icoScene3();
+    scenesVec.push_back(sf);
+    icoScene * ss = new icoScene4();
+    scenesVec.push_back(ss);
+    icoScene * sw = new icoScene5();
+    scenesVec.push_back(sw);
+}
+
 //--------------------------------------------------------------
 void testApp::update(){
     if (oscKinect.hasWaitingMessages()){
@@ -195,6 +218,10 @@ void testApp::update(){
                 } else if (m.getAddress() == "/audio/hiFol"){
                     hiFol = m.getArgAsFloat(0)*2.f;
                 }
+                
+                scenesVec[sceneSel1%scenesVec.size()]->updateAudio(lowFol, lowTrig, midFol, midTrig, hiFol, hiTrig);
+                scenesVec[sceneSel2%scenesVec.size()]->updateAudio(lowFol, lowTrig, midFol, midTrig, hiFol, hiTrig);
+                lowTrig = 0, midTrig = 0, hiTrig = 0;
             }
             
         }
@@ -297,15 +324,15 @@ void testApp::getSides() {
 //    OF_IMAGE_COLORALPHA
     sidesGrabImg.grabScreen(viewGrid[0].x, viewGrid[0].y, viewGrid[N_CAMERAS-1].x+viewGrid[0].width, viewGrid[N_CAMERAS-1].y+viewGrid[N_CAMERAS-1].height);
 //    sidesGrabImg.setImageType(OF_IMAGE_COLOR);
-    sidesImageMat = cv::Mat(sidesGrabImg.height, sidesGrabImg.width, CV_8UC3, sidesGrabImg.getPixels(), 0);
-    udpImageMat = cv::Mat(36, 80, CV_8UC3);
+//    sidesImageMat = cv::Mat(sidesGrabImg.height, sidesGrabImg.width, CV_8UC3, sidesGrabImg.getPixels(), 0);
+//    udpImageMat = cv::Mat(36, 80, CV_8UC3);
 
 
-    sidesImg.allocate(80, 36, OF_IMAGE_COLOR_ALPHA);
+    sidesImg.allocate(80, 30, OF_IMAGE_COLOR_ALPHA);
 //    sidesImg.setImageType(OF_IMAGE_COLOR);
 
     int row_cntr = 0;
-    unsigned char *output = new unsigned char [40*80*3]  ; // (unsigned char*)(sidesImageMat.data);
+    unsigned char *output = new unsigned char [30*80*3]  ; // (unsigned char*)(sidesImageMat.data);
         
     unsigned int cntr = 0;
     for (int cam=0; cam<N_CAMERAS; cam++) {
@@ -344,8 +371,8 @@ ofSetColor(0, 255, 255);
                     break;
                 } else if (camVerts[v_num].x == icoGrabSides[j].y && camVerts[v_num].y == icoGrabSides[j].x) {
                     
-                    ofVec2f vert1 = cameras[cam]->worldToScreen(icoMesh.getVertex(icoGrabSides[j].y), viewGrid[cam]);
-                    ofVec2f vert2 = cameras[cam]->worldToScreen(icoMesh.getVertex(icoGrabSides[j].x), viewGrid[cam]);
+                    ofVec2f vert1 = cameras[cam]->worldToScreen(icoMesh.getVertex(icoGrabSides[j].x), viewGrid[cam]);
+                    ofVec2f vert2 = cameras[cam]->worldToScreen(icoMesh.getVertex(icoGrabSides[j].y), viewGrid[cam]);
                     
                     ofDrawBitmapString(ofToString(j), vert1);
 //                    ofDrawBitmapString(ofToString(j), vert2);
@@ -357,7 +384,7 @@ ofSetColor(0, 255, 255);
                         
                         //                        ofDrawSphere(tmp, 1.);
 //                        udpImageMat.at<ofVec3f>(j, pix_num-1) = sidesImageMat.at<ofVec3f>((int)tmp.y, (int)tmp.x);
-                        ofColor col = sidesGrabImg.getColor(tmp.x, tmp.y).r;
+                        ofColor col = sidesGrabImg.getColor(tmp.x, tmp.y);
 
                         output[j*LEDS_NUM_IN_SIDE*3+pix_num*3+0] = col.r;
                         output[j*LEDS_NUM_IN_SIDE*3+pix_num*3+1] = col.b;
@@ -380,12 +407,12 @@ ofSetColor(0, 255, 255);
         for (int j=0; j<30; j++) {};
             
     }
-    printf("CNTR: %i\n", cntr);
+//    printf("CNTR: %i\n", cntr);
 //    printf("MAT COLS: %i  ROWS: %i  CNTR: %i\n", udpImageMat.cols, udpImageMat.rows, cntr);
 //    icoUtils::drawMat(udpImageMat, 20, 620, udpImageMat.cols, udpImageMat.rows);
     // --- SEND IMG TO UDP ---
     ofSetColor(255);
-    sidesImg.setFromPixels(output, 80, cntr, OF_IMAGE_COLOR);
+    sidesImg.setFromPixels(output, 80, 30, OF_IMAGE_COLOR);
     sidesImg.draw(20, 620);
     drawToUdp(output);
     
@@ -409,14 +436,25 @@ void testApp::drawScene(bool is_main) {
         col.setHsb(255*sin(ofGetFrameNum()*coeff*.1f), 255, 255);
         ofSetColor(col);
         ofFill();
-        for (int i=0;i<kinectMesh.getNumVertices(); i++){
+        for (int i=0;i<kinectMesh.getNumVertices(); i++) {
             ofDrawSphere(kinectMesh.getVertices()[i].x,kinectMesh.getVertices()[i].y,kinectMesh.getVertices()[i].z, .3f);
-            
         }
     }
     ofFill();
+
+    // --------- SCENES ---------
+    ofSetColor(HsvToRgb(1+243*fabs(sin(ofGetFrameNum()*.03f)), 255, 255));
+    scenesVec[sceneSel1%scenesVec.size()]->draw();
+
+    ofSetColor(color);
+    scenesVec[sceneSel2%scenesVec.size()]->draw();
+
+    ofSetColor(255);
+    
+    
+//    sceneManager[1].draw();
 //    ofSetColor(0, 255.0f * sin(ofGetFrameNum()*.8f), 100, 250);
-    ofSetColor(HsvToRgb(300*sin(ofGetFrameNum()*.03f), 255, 255));
+    
 //    ofDrawSphere( 1.5f*sin(ofGetFrameNum()*.07f));
 //    ofDrawSphere(1.0f*sin(ofGetFrameNum()*coeff), 1.f*cos(ofGetFrameNum()*coeff), .0f,  .6f);//sin(ofGetFrameNum()*.02f)
 
@@ -425,19 +463,22 @@ void testApp::drawScene(bool is_main) {
 //    ofDrawBox(1.2f*sin(ofGetFrameNum()*.1f));
     
     ofSetColor(200.0f*unsigned(sin(ofGetFrameNum()*coeff)),200, 0, 200);
-    ofDrawCone(0, 0, 0, 1.0f*sin(ofGetFrameNum()*.05f), 1.5f*sin(ofGetFrameNum()*.07f));
+//    ofDrawCone(0, 0, 0, 1.0f*sin(ofGetFrameNum()*.05f), 1.5f*sin(ofGetFrameNum()*.07f));
     
-    ofSetColor(color);
+    
+    
 
-    pos.set(1.5*ofVec3f(sin(ofGetFrameNum()*coeff), 0, 0));
-    ofDrawBox(pos, .2f, 3.f, 3.f);
+    
+    ofSetColor(HsvToRgb(unsigned(255*sin(ofGetFrameNum()*.03f)), 255, 255));
+//    pos.set(1.5*ofVec3f(sin(ofGetFrameNum()*coeff), 0, 0));
+//    ofDrawBox(pos, .2f, 3.f, 3.f);
 //    ofPushMatrix();
 //        //    ofTranslate(0, 0, 0);
 //        ofTranslate(pos);
 //        boxMesh.draw();
 //    ofPopMatrix;
 //    ofSetColor(150, 0, 200.0f*sin(ofGetFrameNum()*.01f), 200);
-    ofSetColor(color);
+
     ofDrawSphere(0.0f, .0f, 0.0f, radius*0.1);
 
 }
@@ -451,11 +492,11 @@ void testApp::drawPointCloud() {
 	glPointSize(2);
 	ofPushMatrix();
 	// the projected points are 'upside down' and 'backwards'
-	ofScale(1, -1, -1);
-	ofTranslate(0, 0, -100); // center the points a bit
-	ofEnableDepthTest();
-	kinectMesh.drawVertices();
-	ofDisableDepthTest();
+        ofScale(1, -1, -1);
+        ofTranslate(0, 0, -100); // center the points a bit
+        ofEnableDepthTest();
+        kinectMesh.drawVertices();
+//        ofDisableDepthTest();
 	ofPopMatrix();
 }
 
