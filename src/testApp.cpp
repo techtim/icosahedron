@@ -3,7 +3,7 @@
 //--------------------------------------------------------------
 void testApp::setup(){
     setupFinished =false;
-    ofSetFrameRate(60);
+    ofSetFrameRate(30);
     ofSetLogLevel(OF_LOG_VERBOSE);
 	ofBackground(0, 0, 0);
 
@@ -20,7 +20,11 @@ void testApp::setup(){
     setupViewports();
     setupCam(0);
 
+    // --- SCENES ---
     setupScenes();
+    
+    prevGlobalColor.set(255);
+    curGlobalColor.set(0);
     
     x_pos = 80;
 	cam.getMouseInputEnabled();
@@ -39,16 +43,22 @@ void testApp::setup(){
 	gui.add(radius.set( "radius", 1, 0, 20 ));
 	gui.add(center.set("center",ofVec2f(ofGetWidth()*.5,ofGetHeight()*.5),ofVec2f(0,0),ofVec2f(ofGetWidth(),ofGetHeight())));
 	gui.add(color.set("color",ofColor(0,200,140,200),ofColor(0,0,0,0),ofColor(255,255,255,255)));
-	gui.add(circleResolution.set("circleRes", 5, 3, 90));
+    gui.add(colorAlphaTarget.set("alpha:no - low - mid  -  hi", 0, 0, 3));
+    gui.add(color2.set("color2",ofColor(0,50,240,200),ofColor(0,0,0,0),ofColor(255,255,255,255)));
+    gui.add(colorAlphaTarget2.set("alpha:no - low - mid  -  hi", 0, 0, 3));
+//	gui.add(circleResolution.set("circleRes", 5, 3, 90));
 	gui.add(drawSides.set("draw Sides",true));
 	gui.add(drawKinect.set("draw Kinect", false));
     gui.add(sendUdp.set("UDP", false));
-	gui.add(screenSize.set("screenSize", ""));
+//    gui.add(sendUdp2.set("UDP2", false));
+//    gui.add(sendUdp3.set("UDP3", false));
+//	gui.add(screenSize.set("screenSize", ""));
     gui.add(coeff.set("coef", 0.01, 0, 1));
-    gui.add(pos.set("pos", ofVec3f(0,0,0), ofVec3f(-2,-2,-2), ofVec3f(2,2,2)));
+    gui.add(LowMidHiWait.set("Low Mid Hi Wait Between Trigs", ofVec3f(60,60,60), ofVec3f(0,0,0), ofVec3f(200,200,200)));
     gui.add(scene_num.set("scene_num", 0, 0, SCENES_NUM));
     gui.add(sceneSel1.set("Sel scene 1", 0, 0, SCENES_NUM));
     gui.add(sceneSel2.set("Sel scene 2", 1, 0, SCENES_NUM));
+    gui.add(kinectSceneSel.set("Kinect scene", 1, 0, KINECT_SCENES_NUM));
     
     gui.setPosition(200, 20);
 //    gui.setDefaultWidth(300);
@@ -58,7 +68,7 @@ void testApp::setup(){
 	doShader = false;
     
     x_pos=0, y_pos=60;
-
+    
 //    boxMesh.addVertices(&boxVertices[0], 8);
 //	boxMesh.addNormals(boxNormals,8);
 //	boxMesh.addIndices(boxIndices, 3*2*6);
@@ -77,9 +87,18 @@ void testApp::setup(){
     
     // --- OUTPUT ---
     udpConnection.Create();
-	udpAvailable = udpConnection.Connect(RPI_HOST2, RPI_PORT);
-	udpConnection.SetNonBlocking(true);
+	udpAvailable = udpConnection.Connect(RPI_HOST1, RPI_PORT);
 
+    udpConnection2.Create();
+	udpAvailable2 = udpConnection2.Connect(RPI_HOST2, RPI_PORT);
+
+    udpConnection3.Create();
+	udpAvailable3 = udpConnection3.Connect(RPI_HOST3, RPI_PORT);
+    
+	udpConnection.SetNonBlocking(true);
+    udpConnection2.SetNonBlocking(true);
+    udpConnection3.SetNonBlocking(true);
+    
     sidesImg.allocate(80, 30*2, OF_IMAGE_COLOR);
 
     indexGrabPixels = new unsigned * [N_CAMERAS];
@@ -178,6 +197,15 @@ void testApp::setupScenes() {
     scenesVec.push_back(ss);
     icoScene * sw = new icoScene5();
     scenesVec.push_back(sw);
+    
+    ofColor tmp = ofColor(100, 100, 100);
+    sceneColors.push_back(tmp);
+    sceneColors.push_back(tmp);
+//    sceneColors.push_back(ofColor(255));
+    for (int i=0; i<scenesVec.size(); i++) {
+        scenesVec[i]->setIcoMesh(icoMesh);
+        scenesVec[i]->updateParams(sceneColors, LowMidHiWait);
+    }
 }
 
 //--------------------------------------------------------------
@@ -197,10 +225,10 @@ void testApp::update(){
                 tmp.normalize();
     //            printf("%f %f %f \n", tmp.x, tmp.y, tmp.z );
                 kinectMesh.addVertex(tmp);
-                ofVec3f norm = ofVec3f(m.getArgAsInt32(4), m.getArgAsInt32(5), 0);
+                ofVec3f norm = ofVec3f(m.getArgAsInt32(4), m.getArgAsInt32(5), ofRandom(200));
                 norm.normalize();
                 kinectMesh.addNormal(norm);
-                kinectMesh.addColor(ofFloatColor(255.f));
+                kinectMesh.addColor(ofFloatColor(100+ofRandom(155.f)));
 
             } else if (m.getAddress().compare("audio")){
                 
@@ -225,8 +253,47 @@ void testApp::update(){
             }
             
         }
+        if (curGlobalColor != color) {
+            prevGlobalColor = curGlobalColor;
+            curGlobalColor = color;
+            sceneColors.clear();
+            sceneColors.push_back(color);
+            for (int i=0;i<6;i++) {
+                ofColor tmp = color;
+                tmp.r = ofMap(ofRandom(color.get().r), 0, 255, 0, 255);
+                tmp.g = ofMap(ofRandom(color.get().g), 0, 255, 0, 255);
+                tmp.b = ofMap(ofRandom(color.get().b), 0, 255, 0, 255);
+                sceneColors.push_back(tmp);
+            }
+            scenesVec[sceneSel1%scenesVec.size()]->updateParams(sceneColors, LowMidHiWait);
+            scenesVec[sceneSel2%scenesVec.size()]->updateParams(sceneColors, LowMidHiWait);
+        }
+        scenesVec[sceneSel1%scenesVec.size()]->updateCoeff(coeff);
+        scenesVec[sceneSel2%scenesVec.size()]->updateCoeff(coeff);
 
-        color.set(ofColor(color.get().r, color.get().g, color.get().b, lowFol*255.f));
+        float alpha;
+        switch (colorAlphaTarget) {
+            case 0:
+                alpha = color.get().a; break;
+            case 1:
+                alpha = lowFol*255.f; break;
+            case 2:
+                alpha = midFol*255.f; break;
+            case 3:
+                alpha = hiFol*255.f; break;
+        }
+        color.set(ofColor(color.get().r, color.get().g, color.get().b, alpha));
+        switch (colorAlphaTarget2) {
+            case 0:
+                alpha = color2.get().a; break;
+            case 1:
+                alpha = lowFol*255.f; break;
+            case 2:
+                alpha = midFol*255.f; break;
+            case 3:
+                alpha = hiFol*255.f; break;
+        }
+        color2.set(ofColor(color2.get().r, color2.get().g, color2.get().b, alpha));
     }
 }
 //--------------------------------------------------------------
@@ -426,8 +493,8 @@ void testApp::drawScene(bool is_main) {
 
 //    ofSetBackgroundColor(10, 10, 10);
     glEnable(GL_DEPTH_TEST);
-    ofSetColor(0, 200, 255);
-    glLineWidth(.5f);
+//    ofSetColor(0, 200, 255);
+    glLineWidth(.3f);
     
 //    icoMesh.draw(OF_MESH_WIREFRAME);
     
@@ -443,10 +510,13 @@ void testApp::drawScene(bool is_main) {
     ofFill();
 
     // --------- SCENES ---------
-    ofSetColor(HsvToRgb(1+243*fabs(sin(ofGetFrameNum()*.03f)), 255, 255));
+//    ofSetColor(HsvToRgb(1+243*fabs(sin(ofGetFrameNum()*.03f)), 255, 255));
+    scenesVec[sceneSel1%scenesVec.size()]->updateParams(sceneColors, LowMidHiWait);
+    ofSetColor(color);
     scenesVec[sceneSel1%scenesVec.size()]->draw();
 
-    ofSetColor(color);
+    ofSetColor(color2);
+    scenesVec[sceneSel2%scenesVec.size()]->updateParams(sceneColors, LowMidHiWait);
     scenesVec[sceneSel2%scenesVec.size()]->draw();
 
     ofSetColor(255);
@@ -478,7 +548,7 @@ void testApp::drawScene(bool is_main) {
 //        boxMesh.draw();
 //    ofPopMatrix;
 //    ofSetColor(150, 0, 200.0f*sin(ofGetFrameNum()*.01f), 200);
-
+    ofSetColor(color);
     ofDrawSphere(0.0f, .0f, 0.0f, radius*0.1);
 
 }
@@ -521,18 +591,40 @@ void testApp::drawToUdp(ofImage img) {
 }
 
 void testApp::drawToUdp(unsigned char * pix) {
+    
+    
     if (sendUdp) {
-//        img.at<ofColor>();
-        char to_leds [N_LEDS*3];
-        for (int i = 0; i<N_LEDS*3; i++ ) {
-            to_leds[i] = (char)pix[i];
+        
+        char to_leds [LEDS_NUM_IN_SIDE*3*10];
+        int cntr = 0;
+        for (int i = 0; i<LEDS_NUM_IN_SIDE*3*10;i++) {
+//        for (int i = 0; i<N_LEDS*3; i++ ) {
+            to_leds[cntr++] = (char)pix[i];
             //        printf("%02X %02X %02X \n", sto_leds[i*3+0], to_leds[i*3+1], to_leds[i*3+2]);
         }
         //    printf("\n \n");
-        udpConnection.Send(to_leds, N_LEDS*3);
-//        ofLine(ofGetWidth()/2+viewMain.width/2, ofGetHeight()/2-N_LEDS/2, ofGetWidth()/2+viewMain.width/2, ofGetHeight()/2+N_LEDS/2);
-    } else {
-        //        printf("Cant send UDP message \n");
+        udpConnection.Send(to_leds, LEDS_NUM_IN_SIDE*3*10);
+//    }
+//    if (sendUdp2) {
+        char to_leds2 [LEDS_NUM_IN_SIDE*3*11];
+        cntr = 0;
+        for (int i = LEDS_NUM_IN_SIDE*3*10; i<LEDS_NUM_IN_SIDE*3*21;i++ ) {
+            to_leds2[cntr++] = (char)pix[i];
+            //        printf("%02X %02X %02X \n", sto_leds[i*3+0], to_leds[i*3+1], to_leds[i*3+2]);
+        }
+        //    printf("\n \n");
+//        udpConnection.Send(to_leds, N_LEDS*3);
+        udpConnection2.Send(to_leds2, LEDS_NUM_IN_SIDE*3*11);
+//    }
+//    if (sendUdp3) {
+        char to_leds3 [LEDS_NUM_IN_SIDE*3*9];
+        cntr = 0;
+        for (int i = LEDS_NUM_IN_SIDE*3*21; i<LEDS_NUM_IN_SIDE*3*30; i++ ) {
+            to_leds3[cntr++] = (char)pix[i];
+            //        printf("%02X %02X %02X \n", sto_leds[i*3+0], to_leds[i*3+1], to_leds[i*3+2]);
+        }
+        //    printf("\n \n");
+        udpConnection3.Send(to_leds3, LEDS_NUM_IN_SIDE*3*9);
     }
 
 }

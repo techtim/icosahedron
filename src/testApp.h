@@ -7,17 +7,19 @@
 #include "ofxMesh.h"
 #include "OrthoCamera.h"
 #include "ofxOsc.h"
-#include "icoScene.h"
 
+#include "icoScene.h"
+#include "kinectScene.h"
 #include "ofxOpenCv.h"
 
 #define N_CAMERAS 12
 //#define N_LEDS 800
-#define N_LEDS 400
+#define N_LEDS 2400
 #define SCENES_NUM 10
 
 #define RPI_HOST1 "192.168.2.50"
 #define RPI_HOST2 "192.168.2.51" //223"
+#define RPI_HOST3 "192.168.2.52"
 #define RPI_PORT 2525
 
 #define LEDS_NUM_IN_SIDE 80
@@ -25,7 +27,7 @@
 #define KINECT_OSC_HOST "localhost"
 #define KINECT_OSC_PORT 1337
 //#define AUDIO_OSC_PORT 1337
-
+#define KINECT_SCENES_NUM 5
 #define KINECT_W 640
 #define KINECT_H 480
 
@@ -110,20 +112,26 @@ class testApp : public ofBaseApp{
         
         ofParameter<float> radius;
         ofParameter<ofColor> color;
+        ofParameter<int> colorAlphaTarget;
+        ofParameter<ofColor> color2;
+        ofParameter<int> colorAlphaTarget2;
         ofParameter<ofVec2f> center;
         ofParameter<int> circleResolution;
         ofParameter<bool> filled;
         ofParameter<bool> drawSides;
         ofParameter<bool> drawKinect;
         ofParameter<bool> sendUdp;
+        ofParameter<bool> sendUdp2;
+        ofParameter<bool> sendUdp3;
         ofParameter<int> shutter;
         ofParameter<bool> lamp;
-        ofParameter<ofVec3f> pos;
+        ofParameter<ofVec3f> LowMidHiWait;
         ofParameter<float> coeff;
         ofParameter<int> scene_num;
         ofParameter<int> sceneSel1;
         ofParameter<int> sceneSel2;
-        ofParameter<string> screenSize;
+        ofParameter<int> kinectSceneSel;
+//        ofParameter<string> screenSize;
     
         // --- INPUT ----
         ofxOscReceiver oscKinect;
@@ -131,30 +139,37 @@ class testApp : public ofBaseApp{
         ofVec3f * kinectPos;
         ofVec3f * kinectVel;
         unsigned int * kinectLabels;
-    vector<ofVec3f> kinectPoints;
+        vector<ofVec3f> kinectPoints;
     
         // --- Audio ---
         float  lowFol, midFol, hiFol;
         int lowTrig, midTrig, hiTrig;
     
         // --- OUTPUT ---
-        ofxUDPManager udpConnection;
+        ofxUDPManager udpConnection, udpConnection2, udpConnection3;
+    
         ofImage screenImg;
         ofImage sidesImg;
         ofImage sidesGrabImg;
-        bool udpAvailable;
+        bool udpAvailable, udpAvailable2, udpAvailable3;
         ofVec3f ** triGrabPoints;
         ofVec3f * sidesGrabPoints;
         unsigned int ** indexGrabPixels;
 //        cv::Mat sidesImageMat, udpImageMat;
 
         // --- SCENES ---
+
         void setupScenes();
 //        icoScene * sceneManager[SCENES_NUM];
         vector <icoScene *> scenesVec;
+        vector <kinectScene *> kinectScenesVec;
+        vector <ofColor> sceneColors;
         icoScene1 iScene1;
         icoScene2 iScene2;
-        
+
+        ofColor prevGlobalColor, curGlobalColor;
+    
+    
     
     ofColor HsvToRgb (float hue, float satur, float value )
     {

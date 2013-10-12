@@ -38,6 +38,9 @@
 		3AAD79B017FF5FEA001E2F19 /* ofxOscParameterSync.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 3AAD799F17FF5FEA001E2F19 /* ofxOscParameterSync.cpp */; };
 		3AAD79B117FF5FEA001E2F19 /* ofxOscReceiver.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 3AAD79A117FF5FEA001E2F19 /* ofxOscReceiver.cpp */; };
 		3AAD79B217FF5FEA001E2F19 /* ofxOscSender.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 3AAD79A317FF5FEA001E2F19 /* ofxOscSender.cpp */; };
+		3AD6A4C71806BEA6003766A5 /* Particle.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 3AD6A4C51806BEA6003766A5 /* Particle.cpp */; };
+		3AD6A4D81806D412003766A5 /* phong.frag in Sources */ = {isa = PBXBuildFile; fileRef = 3AD6A4D61806D412003766A5 /* phong.frag */; };
+		3AD6A4D91806D412003766A5 /* phong.vert in Sources */ = {isa = PBXBuildFile; fileRef = 3AD6A4D71806D412003766A5 /* phong.vert */; };
 		3AF651B11800DD7000CFCD90 /* opencv.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 3AF6519D1800DD7000CFCD90 /* opencv.a */; };
 		3AF651B21800DD7000CFCD90 /* ofxCvColorImage.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 3AF651A01800DD7000CFCD90 /* ofxCvColorImage.cpp */; };
 		3AF651B31800DD7000CFCD90 /* ofxCvContourFinder.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 3AF651A31800DD7000CFCD90 /* ofxCvContourFinder.cpp */; };
@@ -175,6 +178,11 @@
 		3AAD79A317FF5FEA001E2F19 /* ofxOscSender.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = ofxOscSender.cpp; sourceTree = "<group>"; };
 		3AAD79A417FF5FEA001E2F19 /* ofxOscSender.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = ofxOscSender.h; sourceTree = "<group>"; };
 		3AB401B417FCCD24007A859E /* kinectWork.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = kinectWork.h; sourceTree = "<group>"; };
+		3AD6A4C31806B19D003766A5 /* kinectScene.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = kinectScene.h; sourceTree = "<group>"; };
+		3AD6A4C51806BEA6003766A5 /* Particle.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = Particle.cpp; sourceTree = "<group>"; };
+		3AD6A4C61806BEA6003766A5 /* Particle.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = Particle.h; sourceTree = "<group>"; };
+		3AD6A4D61806D412003766A5 /* phong.frag */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.glsl; path = phong.frag; sourceTree = "<group>"; };
+		3AD6A4D71806D412003766A5 /* phong.vert */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.glsl; path = phong.vert; sourceTree = "<group>"; };
 		3AF651361800DD7000CFCD90 /* addon_config.mk */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = addon_config.mk; sourceTree = "<group>"; };
 		3AF6513B1800DD7000CFCD90 /* cv.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = cv.h; sourceTree = "<group>"; };
 		3AF6513C1800DD7000CFCD90 /* cv.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; path = cv.hpp; sourceTree = "<group>"; };
@@ -366,6 +374,8 @@
 		3A2AC58F17BE3B85006A0AAE /* shaders */ = {
 			isa = PBXGroup;
 			children = (
+				3AD6A4D61806D412003766A5 /* phong.frag */,
+				3AD6A4D71806D412003766A5 /* phong.vert */,
 				3A2AC59017BE3B85006A0AAE /* noise.frag */,
 				3A2AC59117BE3B85006A0AAE /* noise.vert */,
 			);
@@ -928,6 +938,9 @@
 				3AB401B417FCCD24007A859E /* kinectWork.h */,
 				3A1547A518000E9F0099956C /* icoScene.h */,
 				3A8105431805EA8A002FD898 /* icoScene.cpp */,
+				3AD6A4C31806B19D003766A5 /* kinectScene.h */,
+				3AD6A4C51806BEA6003766A5 /* Particle.cpp */,
+				3AD6A4C61806BEA6003766A5 /* Particle.h */,
 			);
 			path = src;
 			sourceTree = SOURCE_ROOT;
@@ -1069,6 +1082,9 @@
 				3AF651B71800DD7000CFCD90 /* ofxCvImage.cpp in Sources */,
 				3AF651B81800DD7000CFCD90 /* ofxCvShortImage.cpp in Sources */,
 				3A8105441805EA8A002FD898 /* icoScene.cpp in Sources */,
+				3AD6A4C71806BEA6003766A5 /* Particle.cpp in Sources */,
+				3AD6A4D81806D412003766A5 /* phong.frag in Sources */,
+				3AD6A4D91806D412003766A5 /* phong.vert in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

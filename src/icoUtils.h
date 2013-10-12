@@ -4,6 +4,7 @@
 #include "ofxNetwork.h"
 #include "ofxOpenCv.h"
 
+#define PI       3.14159265358979323846
 
 const ofIndexType Faces[] = {
     2, 1, 0, //0
@@ -59,7 +60,7 @@ const ofVec2f icoGrabSides[] = {
     ofVec2f(6, 2),
 	ofVec2f(2, 3),
 	ofVec2f(3, 0),
-    ofVec2f(0, 4),
+    ofVec2f(0, 4), // 10 sides
     
 	ofVec2f(1, 10),
 	ofVec2f(10, 9),
@@ -71,7 +72,7 @@ const ofVec2f icoGrabSides[] = {
     ofVec2f(6, 10),
     ofVec2f(10,5), // 5 drop to 10
     ofVec2f(10,11),
-    ofVec2f(11,6),
+    ofVec2f(11,6), // 11 sides
     
     ofVec2f(2, 7),
     ofVec2f(7, 8),
@@ -81,7 +82,7 @@ const ofVec2f icoGrabSides[] = {
     ofVec2f(8, 3), // 3 drop to 7
     ofVec2f(7,11), //11 drop to 8
     ofVec2f(8, 4),
-    ofVec2f(4, 9),
+    ofVec2f(4, 9), // 9 sides
 };
 
 const float Verts[] = {
@@ -230,6 +231,28 @@ public:
         }
 
     }
+    
+    static float trigFunc(int funcNum, float t) {
+        float res = 0;
+        switch (funcNum) {
+            case 0 :
+                res = pow(sin(t*PI), 12);
+                break;
+            case 1 :
+                res = sin(tan(t)*pow(sin(t),10));
+                break;
+            case 2 :
+                res = sin(pow(12,sin(t)));
+                break;
+            case 3 :
+                res = sin(t - PI*tan(t)*0.01);
+                break;
+            case 4 :
+                res = sin(t);
+                break;
+        }
+        return res;
+    };
 
 };
 
