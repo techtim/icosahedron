@@ -7,9 +7,10 @@
 #include "ofxMesh.h"
 #include "OrthoCamera.h"
 #include "ofxOsc.h"
+#include "ofxOscParameterSync.h"
 
 #include "icoScene.h"
-#include "kinectScene.h"
+//#include "kinectScene.h"
 #include "ofxOpenCv.h"
 
 #define N_CAMERAS 12
@@ -27,7 +28,7 @@
 #define KINECT_OSC_HOST "localhost"
 #define KINECT_OSC_PORT 1337
 //#define AUDIO_OSC_PORT 1337
-#define KINECT_SCENES_NUM 5
+#define KINECT_SCENES_NUM 10
 #define KINECT_W 640
 #define KINECT_H 480
 
@@ -115,7 +116,7 @@ class testApp : public ofBaseApp{
         ofParameter<int> colorAlphaTarget;
         ofParameter<ofColor> color2;
         ofParameter<int> colorAlphaTarget2;
-        ofParameter<ofVec2f> center;
+        ofParameter<ofVec3f> center;
         ofParameter<int> circleResolution;
         ofParameter<bool> filled;
         ofParameter<bool> drawSides;
@@ -135,6 +136,7 @@ class testApp : public ofBaseApp{
     
         // --- INPUT ----
         ofxOscReceiver oscKinect;
+        ofxOscParameterSync sync;
 
         ofVec3f * kinectPos;
         ofVec3f * kinectVel;
@@ -162,7 +164,7 @@ class testApp : public ofBaseApp{
         void setupScenes();
 //        icoScene * sceneManager[SCENES_NUM];
         vector <icoScene *> scenesVec;
-        vector <kinectScene *> kinectScenesVec;
+//        vector <kinectScene *> kinectScenesVec;
         vector <ofColor> sceneColors;
         icoScene1 iScene1;
         icoScene2 iScene2;

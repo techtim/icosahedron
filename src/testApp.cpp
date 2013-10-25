@@ -41,7 +41,7 @@ void testApp::setup(){
     gui.setup("panel"); // most of the time you don't need a name but don't forget to call setup
 	gui.add(filled.set("bFill", true));
 	gui.add(radius.set( "radius", 1, 0, 20 ));
-	gui.add(center.set("center",ofVec2f(ofGetWidth()*.5,ofGetHeight()*.5),ofVec2f(0,0),ofVec2f(ofGetWidth(),ofGetHeight())));
+	gui.add(center.set("size/pos",ofVec3f(0,0,0),ofVec3f(-2.2,-2.2, -2.2),ofVec3f(2.2, 2.2, 2.2)));
 	gui.add(color.set("color",ofColor(0,200,140,200),ofColor(0,0,0,0),ofColor(255,255,255,255)));
     gui.add(colorAlphaTarget.set("alpha:no - low - mid  -  hi", 0, 0, 3));
     gui.add(color2.set("color2",ofColor(0,50,240,200),ofColor(0,0,0,0),ofColor(255,255,255,255)));
@@ -58,8 +58,10 @@ void testApp::setup(){
     gui.add(scene_num.set("scene_num", 0, 0, SCENES_NUM));
     gui.add(sceneSel1.set("Sel scene 1", 0, 0, SCENES_NUM));
     gui.add(sceneSel2.set("Sel scene 2", 1, 0, SCENES_NUM));
-    gui.add(kinectSceneSel.set("Kinect scene", 1, 0, KINECT_SCENES_NUM));
+//    gui.add(kinectSceneSel.set("Kinect scene", 1, 0, KINECT_SCENES_NUM));
     
+//    sync.setup(<#ofParameterGroup &group#>, <#int localPort#>, <#string remoteHost#>, <#int remotePort#>)
+    sync.setup((ofParameterGroup&)gui.getParameter(),6666,"192.168.2.5",6667);
     gui.setPosition(200, 20);
 //    gui.setDefaultWidth(300);
     
@@ -197,6 +199,10 @@ void testApp::setupScenes() {
     scenesVec.push_back(ss);
     icoScene * sw = new icoScene5();
     scenesVec.push_back(sw);
+    scenesVec.push_back(new icoScene6());
+    scenesVec.push_back(new icoScene7());
+    scenesVec.push_back(new icoScene8());
+    scenesVec.push_back(new icoScene9());
     
     ofColor tmp = ofColor(100, 100, 100);
     sceneColors.push_back(tmp);
@@ -265,9 +271,10 @@ void testApp::update(){
                 tmp.b = ofMap(ofRandom(color.get().b), 0, 255, 0, 255);
                 sceneColors.push_back(tmp);
             }
-            scenesVec[sceneSel1%scenesVec.size()]->updateParams(sceneColors, LowMidHiWait);
-            scenesVec[sceneSel2%scenesVec.size()]->updateParams(sceneColors, LowMidHiWait);
         }
+        scenesVec[sceneSel1%scenesVec.size()]->updateParams(sceneColors, LowMidHiWait, center);
+        scenesVec[sceneSel2%scenesVec.size()]->updateParams(sceneColors, LowMidHiWait, center);
+        
         scenesVec[sceneSel1%scenesVec.size()]->updateCoeff(coeff);
         scenesVec[sceneSel2%scenesVec.size()]->updateCoeff(coeff);
 
@@ -302,8 +309,8 @@ void testApp::draw() {
     ofEnableDepthTest();
 //    glBlendEquationSeparate(GL_FUNC_ADD, GL_FUNC_ADD);
 //    glBlendFuncSeparate(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA, GL_ONE, GL_ZERO);
-    glBlendEquationSeparate(GL_FUNC_ADD, GL_FUNC_ADD);
-    glBlendFuncSeparate(GL_ONE, GL_ONE_MINUS_SRC_ALPHA, GL_ONE, GL_ZERO);
+//    glBlendEquationSeparate(GL_FUNC_ADD, GL_FUNC_ADD);
+//    glBlendFuncSeparate(GL_ONE, GL_ONE_MINUS_SRC_ALPHA, GL_ONE, GL_ZERO);
     cam.begin(viewMain);
 //
     if (drawKinect == true) {
@@ -344,16 +351,16 @@ void testApp::draw() {
     ofDisableDepthTest();
 //    glDepthFunc(GL_ALWAYS);
     ofSetColor(255.f, 255.f, 255.f);
-    ofDrawBitmapString("X="+ofToString(cam.getX()), 20.0f, 10.0f);
-    ofDrawBitmapString("Y="+ofToString(cam.getY()), 100.5f, 10.0f);
-    ofDrawBitmapString("Z="+ofToString(cam.getZ()), 200.0f, 10.0f);
+//    ofDrawBitmapString("X="+ofToString(cam.getX()), 20.0f, 10.0f);
+//    ofDrawBitmapString("Y="+ofToString(cam.getY()), 100.5f, 10.0f);
+//    ofDrawBitmapString("Z="+ofToString(cam.getZ()), 200.0f, 10.0f);
     ofDrawBitmapString("FPS="+ofToString(ofGetFrameRate()), 300.0f, 10.0f);
-    ofDrawBitmapString("DIST="+ofToString(cam.getDistance()), 11.5f, 40.0f);
-    ofDrawBitmapString("  POS="+ofToString(cam.getPosition()), 150.5f, 40.0f);
-    ofVec3f tmp = icoMesh.getVertices()[Faces[selectCam*3+0]]+icoMesh.getVertices()[Faces[selectCam*3+1]]+icoMesh.getVertices()[Faces[selectCam*3+2]];
-    ofDrawBitmapString("O_POS="+ofToString(tmp),150.5f, 50.0f);
+//    ofDrawBitmapString("DIST="+ofToString(cam.getDistance()), 11.5f, 40.0f);
+//    ofDrawBitmapString("  POS="+ofToString(cam.getPosition()), 150.5f, 40.0f);
+//    ofVec3f tmp = icoMesh.getVertices()[Faces[selectCam*3+0]]+icoMesh.getVertices()[Faces[selectCam*3+1]]+icoMesh.getVertices()[Faces[selectCam*3+2]];
+//    ofDrawBitmapString("O_POS="+ofToString(tmp),150.5f, 50.0f);
     
-    ofDrawBitmapString(ofToString(cam.getLocalTransformMatrix()), 521.5f, 60.0f);
+//    ofDrawBitmapString(ofToString(cam.getLocalTransformMatrix()), 521.5f, 60.0f);
 
     gui.draw();
 //    glDepthFunc(GL_LESS);
